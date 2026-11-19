@@ -1,6 +1,19 @@
 # Operação, deploy e backup (VPS/Dokku)
 
-> Nada disto foi executado: não houve deploy, nem criação de serviço, domínio ou banco de produção. É o roteiro para quando houver autorização.
+> **Executado em 19/11/2026** (ver `docs/STATUS.md` → Produção): app `gio-quiz`, banco `gio-quiz-db`, domínio `quizz.giopizzeria.com.br` com HTTPS. Backup/restauração e criação dos logins da equipe ainda pendentes.
+
+## Atualizar o app (deploy)
+```bash
+GIT_SSH_COMMAND="ssh -i ~/.ssh/gio_dokku -o IdentitiesOnly=yes" git push dokku main
+```
+
+## Criar login da equipe em produção
+A senha é digitada no terminal (não ecoa, não fica em histórico nem em log):
+```bash
+ssh -t -i ~/.ssh/gio_dokku root@187.127.46.186 \
+  dokku run gio-quiz npm run staff:create -- --user <login> --name "<Nome>" --role manager
+```
+`--role manager` gerencia campanhas; `attendant` só gera convites e confere/entrega brindes. Use um login por pessoa.
 
 ## Primeiro deploy
 ```bash

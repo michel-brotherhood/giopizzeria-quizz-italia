@@ -93,6 +93,16 @@ E2E Playwright (`npm run test:e2e`: build de produção servido pelo Express + P
 ## Repositório
 - Publicado no GitHub `michel-brotherhood/giopizzeria-quizz-italia` (público) a pedido do usuário. **Fora do Git**: fonte comercial Arquitecta (originais e subset WOFF2 — ver `docs/ASSETS.md` para regenerar), RAWs `.CR2`, vídeo `.mp4`, `.env`, bancos locais (`.data/`), logs e `node_modules`.
 
+## Produção (19/11/2026)
+Publicado com autorização do usuário em **https://quizz.giopizzeria.com.br** (VPS Hostinger, Dokku 0.38.34, app `gio-quiz`, banco `gio-quiz-db` PostgreSQL 18.4). Outros apps da VPS não foram alterados.
+- Chave SSH dedicada `~/.ssh/gio_dokku` (root e `dokku ssh-keys` como `gio-quiz-deploy`); a chave de outro projeto não foi usada.
+- Config: `APP_ENV=production`, `REAL_CAMPAIGNS_ENABLED=false`, `COOKIE_SECURE=true`, `TRUST_PROXY=1`, `SERVE_STATIC=true`, `PUBLIC_BASE_URL=https://quizz.giopizzeria.com.br`; `SESSION_SECRET` gerado na VPS (`openssl rand`), não passou pela máquina de desenvolvimento.
+- HTTPS Let's Encrypt (CN quizz.giopizzeria.com.br, vence 17/02/2027) + cron de renovação do plugin; HTTP → 301 HTTPS; HSTS.
+- Deploy: predeploy `migrations ok`; healthchecks `api-health` e porta: ok.
+- Corrigido no 1º deploy: aviso `ERR_ERL_KEY_GEN_IPV6` do express-rate-limit (chave por IP sem agrupar IPv6) → `ipKeyGenerator`. Lint ok, unit 28/28, integração 37/37 após a correção.
+- Verificado de fora: `/api/health` → `{"ok":true,"env":"production"}`; `/api/campaign/current` → modo demo, sem campanha; POST com Origin alheia → `CSRF_FAILED`; login inválido → `INVALID_CREDENTIALS`; CSP/no-referrer/HSTS presentes. Demo completa (8 perguntas → resultado) em Chromium contra a produção: cena 3D com 31.136 triângulos/86 draw calls; únicos erros de console: 404 da fonte (ausente por licença) e 401 esperado de sessão inexistente.
+- **Pendente:** criar o(s) login(s) da equipe (senha digitada pelo responsável, ver `docs/OPERACAO.md`), testar backup/restauração e ensaio com a equipe. Nenhuma campanha (nem de teste) existe em produção.
+
 ## Limitações conhecidas
 - Se o cliente perder o código **e** a credencial ficar ilegível (troca de `SESSION_SECRET`), a equipe não tem busca por conta para entregar; definir procedimento antes da campanha real.
 - Limite real é por convite/conta, não por pessoa física; QR/print pode ser repassado (equipe confere conta e status).
@@ -103,4 +113,4 @@ E2E Playwright (`npm run test:e2e`: build de produção servido pelo Express + P
 2. Confirmar licença web da Arquitecta e uso dos selos AVPN/50 Top Pizza.
 3. Revisão editorial das 32 perguntas.
 4. Testar em 2–3 celulares reais (Android intermediário + iPhone) e medir fps/LCP.
-5. Provisionar VPS/Dokku, testar backup/restauração e fazer ensaio com a equipe (convite → jogo → consulta → entrega).
+5. ~~Provisionar VPS/Dokku~~ (feito, ver Produção); testar backup/restauração e fazer ensaio com a equipe (convite → jogo → consulta → entrega).
