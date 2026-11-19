@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Gio Pizzeria — Da massa ao forno: quiz gastronômico 3D com fluxo de brindes controlado pelo servidor.",
   "engines": {
-    "node": ">=20.19"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "concurrently -k -n api,web \"npm:dev:api\" \"npm:dev:web\"",
