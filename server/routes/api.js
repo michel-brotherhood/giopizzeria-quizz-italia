@@ -6,6 +6,7 @@ import { campaignView, getActiveCampaign, getCurrentForStaff, createCampaign, up
 import { exchangeInvitation, getSessionState, answerQuestion, completeSession } from '../services/player.js';
 import { login, logout, operatorView, createInvitation, lookupVoucher, redeemVoucher, recentInvitations } from '../services/staff.js';
 import { register, registrationFromToken, registrationSummary, registrationsCsv, deleteRegistration, PRIVACY_VERSION } from '../services/registrations.js';
+import { recordFreePlay } from '../services/plays.js';
 import QRCode from 'qrcode';
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -42,6 +43,13 @@ export function apiRouter(pool) {
   r.post('/register/leave', wrap(async (_req, res) => {
     res.clearCookie(REG_COOKIE, { ...cookieOpts(0), maxAge: undefined });
     res.json({ ok: true });
+  }));
+
+  // Resultado de partida sem brinde: o servidor recorrige e guarda no cadastro (não gera brinde).
+  r.post('/play/result', limits.exchange(), wrap(async (req, res) => {
+    const reg = await registrationFromToken(pool, req.cookies?.[REG_COOKIE]);
+    if (!reg) throw err('REGISTRATION_REQUIRED');
+    res.json(await recordFreePlay(pool, reg.id, req.body ?? {}));
   }));
 
   // ---------- jogador ----------
@@ -116,8 +124,8 @@ export function apiRouter(pool) {
   }));
 
   // ---------- gerente: cadastros ----------
-  r.get('/staff/registrations', manager, limits.staff(), wrap(async (_req, res) => {
-    res.json(await registrationSummary(pool));
+  r.get('/staff/registrations', manager, limits.staff(), wrap(async (req, res) => {
+    res.json(await registrationSummary(pool, { q: req.query.q, marketing: req.query.marketing, page: req.query.page }));
   }));
   r.get('/staff/registrations.csv', manager, limits.staff(), wrap(async (req, res) => {
     const csv = await registrationsCsv(pool, req.staff);

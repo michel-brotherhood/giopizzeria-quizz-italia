@@ -50,6 +50,8 @@ const M = {
   REGISTRATION_REQUIRED: [401, 'Faça seu cadastro para jogar.'],
   REGISTRATION_INVALID: [400, 'Confira os dados do cadastro.'],
   REGISTRATION_NOT_FOUND: [404, 'Nenhum cadastro com este e-mail.'],
+  PLAY_INVALID: [400, 'Resultado de partida inválido.'],
+  PLAY_LIMIT: [429, 'Muitas partidas registradas hoje. Tente amanhã.'],
 };
 
 export function err(code, extra, message) {

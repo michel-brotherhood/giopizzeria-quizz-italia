@@ -71,7 +71,14 @@
       <section class="card" role="tabpanel" id="panel-regs" aria-labelledby="tab-regs" hidden>
         <h2>Cadastros de clientes</h2>
         <p class="help">Dados pessoais: use só para as finalidades da Política de Privacidade. Envie promoções apenas para quem autorizou (coluna “aceita_promocoes = sim”). Não compartilhe a planilha.</p>
-        <div id="regs-body"><p>Carregando…</p></div>
+        <div id="regs-stats" aria-live="polite"><p>Carregando…</p></div>
+        <h3 class="sub">Lista de cadastros</h3>
+        <form id="regs-search" class="regs-search" role="search">
+          <label>Buscar por nome, e-mail ou WhatsApp <input name="q" type="search" maxlength="80" autocomplete="off"></label>
+          <label class="check"><input name="marketing" type="checkbox"> Só quem aceita promoções</label>
+          <button class="s-btn" type="submit">Buscar</button>
+        </form>
+        <div id="regs-body"></div>
         <div class="row"><a class="s-btn primary" id="regs-csv" href="/api/staff/registrations.csv" download>Baixar planilha (CSV)</a></div>
         <details class="regs-del">
           <summary>Excluir cadastro a pedido do cliente</summary>

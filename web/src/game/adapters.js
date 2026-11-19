@@ -16,6 +16,12 @@ export { store };
 const DEMO_KEY = 'gio.demo.v1';
 const demoScore = (answers) => scoreOf(answers.map((a) => ({ isCorrect: a.correct === true })));
 
+function newPlayId() {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
 function cryptoRng() {
   const a = new Uint32Array(1);
   crypto.getRandomValues(a);
@@ -37,6 +43,7 @@ export class DemoAdapter {
       && saved.answers.length <= ROUND_SIZE && saved.round.every((q) => q && q.id && Array.isArray(q.options) && q.correctOptionId);
     if (!valid) { if (saved) store.del(DEMO_KEY); return null; }
     this.round = saved.round; this.answers = saved.answers;
+    this.playId = typeof saved.playId === 'string' ? saved.playId : newPlayId();
     return this.state();
   }
 
@@ -44,14 +51,15 @@ export class DemoAdapter {
     const seen = new Set(store.getLocal('gio.demo.seen') ?? []);
     this.round = drawRound(this.bank, cryptoRng, { seen });
     this.answers = [];
+    this.playId = newPlayId();
     const nextSeen = [...seen, ...this.round.map((q) => q.id)].slice(-24);
     store.setLocal('gio.demo.seen', nextSeen);
     this.persist();
     return this.state();
   }
 
-  persist() { store.set(DEMO_KEY, { round: this.round, answers: this.answers }); }
-  clear() { store.del(DEMO_KEY); this.round = null; this.answers = []; }
+  persist() { store.set(DEMO_KEY, { round: this.round, answers: this.answers, playId: this.playId }); }
+  clear() { store.del(DEMO_KEY); this.round = null; this.answers = []; this.playId = null; }
 
   state() {
     const n = this.answers.length;
@@ -89,7 +97,24 @@ export class DemoAdapter {
     this.completed = true;
     const s = this.state();
     s.session.state = 'completed';
+    this.saveResult();
     return s; // demo: nunca há voucher
+  }
+
+  /** Envia as escolhas para o servidor guardar no cadastro (ele recorrige). Não bloqueia o resultado. */
+  saveResult() {
+    if (this.answers.length !== ROUND_SIZE || !this.playId || this.savedPlayId === this.playId) return;
+    this.savedPlayId = this.playId;
+    const body = { playId: this.playId, answers: this.answers.map((a) => ({ questionId: a.questionId, selectedOptionId: a.selectedOptionId })) };
+    const send = async (attempt) => {
+      try {
+        await api('/api/play/result', { method: 'POST', body });
+      } catch (e) {
+        const retry = e.code === 'NETWORK' || e.code === 'TIMEOUT' || (e.status >= 500);
+        if (retry && attempt < 3) setTimeout(() => send(attempt + 1), 3000 * 2 ** attempt);
+      }
+    };
+    send(0);
   }
 }
 

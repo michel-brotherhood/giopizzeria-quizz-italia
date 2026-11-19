@@ -98,23 +98,92 @@ for (const t of ['invite', 'check', 'manage', 'regs']) $(`tab-${t}`).addEventLis
 
 // ---------- cadastros (gerente) ----------
 const fmtDT = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-async function loadRegistrations() {
+const regsQuery = { q: '', marketing: false, page: 1 };
+const fmtPct = (x) => `${Math.round(x * 100)}%`;
+const fmtPhone = (p) => {
+  const m = String(p).match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  return m ? `(${m[1]}) ${m[2]}-${m[3]}` : `+${p}`;
+};
+const counter = (label, value) => el('div', {}, el('dt', {}, label), el('dd', {}, value == null ? '—' : String(value)));
+
+function renderRegStats(r) {
+  const max = Math.max(1, ...r.distribution);
+  const kids = [
+    el('dl', { class: 'counters' },
+      counter('Cadastros', r.total), counter('Aceitam promoções', r.marketing), counter('Novos em 24 h', r.last24h),
+      counter('Partidas', r.plays), counter('Partidas em 24 h', r.plays24h),
+      counter('Média de acertos', r.avgCorrect == null ? null : `${String(r.avgCorrect).replace('.', ',')}/8`),
+      counter('Com 7 ou 8 acertos', r.highScores)),
+  ];
+  if (r.plays > 0) {
+    kids.push(el('h3', { class: 'sub' }, 'Acertos por partida'),
+      el('div', { class: 'dist', role: 'img', 'aria-label': r.distribution.map((n, i) => `${i} acertos: ${n}`).join('; ') },
+        ...r.distribution.map((n, i) => el('div', {}, el('span', {}, String(n)),
+          el('i', { class: i >= 7 ? 'hi' : '', style: `height:${Math.round((n / max) * 100)}%` })))),
+      el('div', { class: 'dist-labels', 'aria-hidden': 'true' }, ...r.distribution.map((_, i) => el('span', {}, String(i)))),
+      el('p', { class: 'help' }, 'Número de acertos (de 8). Em verde, as partidas que bateriam uma meta de 7 acertos.'));
+  }
+  if (r.questions.length) {
+    kids.push(el('h3', { class: 'sub' }, 'Perguntas que o público mais erra'),
+      el('div', { class: 'table-wrap' }, el('table', {},
+        el('thead', {}, el('tr', {}, el('th', {}, 'Pergunta'), el('th', { class: 'num' }, 'Acerto'), el('th', { class: 'num' }, 'Respostas'))),
+        el('tbody', {}, ...r.questions.map((q) => el('tr', {},
+          el('td', {}, q.question),
+          el('td', { class: 'num' }, el('span', { class: `rate${q.rate < 0.4 ? ' low' : ''}` }, fmtPct(q.rate))),
+          el('td', { class: 'num' }, String(q.answered))))))),
+      el('p', { class: 'help' }, 'Bom para ajustar o texto da pergunta ou virar assunto de conversa no salão.'));
+  }
+  $('regs-stats').replaceChildren(...kids);
+}
+
+function renderRegList(r) {
   const body = $('regs-body');
+  if (!r.recent.length) {
+    body.replaceChildren(el('p', { class: 'help' }, r.total ? 'Nenhum cadastro encontrado com esse filtro.' : 'Nenhum cadastro ainda.'));
+    return;
+  }
+  const pager = () => el('div', { class: 'pager' },
+    el('span', { class: 'help' }, `${r.matched} cadastro${r.matched === 1 ? '' : 's'} · página ${r.page} de ${r.pages}`),
+    el('div', { class: 'row' },
+      el('button', { class: 's-btn', type: 'button', disabled: r.page <= 1, onclick: () => { regsQuery.page = r.page - 1; loadRegistrations(); } }, 'Anterior'),
+      el('button', { class: 's-btn', type: 'button', disabled: r.page >= r.pages, onclick: () => { regsQuery.page = r.page + 1; loadRegistrations(); } }, 'Próxima')));
+  body.replaceChildren(pager(), el('div', { class: 'table-wrap' }, el('table', {},
+    el('thead', {}, el('tr', {},
+      el('th', {}, 'Nome'), el('th', {}, 'WhatsApp'), el('th', {}, 'E-mail'), el('th', {}, 'Promoções'),
+      el('th', { class: 'num' }, 'Partidas'), el('th', { class: 'num' }, 'Melhor'), el('th', { class: 'num' }, 'Brindes'),
+      el('th', {}, 'Última partida'), el('th', {}, 'Cadastro'))),
+    el('tbody', {}, ...r.recent.map((x) => el('tr', {},
+      el('td', {}, x.name),
+      el('td', { class: 'nowrap' }, el('a', { href: `https://wa.me/${x.phone}`, target: '_blank', rel: 'noopener noreferrer' }, fmtPhone(x.phone))),
+      el('td', {}, x.email),
+      el('td', {}, x.marketing ? 'sim' : 'não'),
+      el('td', { class: 'num' }, String(x.plays)),
+      el('td', { class: 'num' }, x.best == null ? '—' : `${x.best}/8`),
+      el('td', { class: 'num' }, x.vouchers ? `${x.redeemed}/${x.vouchers} entregue${x.redeemed === 1 ? '' : 's'}` : '—'),
+      el('td', { class: 'nowrap' }, x.lastPlay ? fmtDT.format(new Date(x.lastPlay)) : '—'),
+      el('td', { class: 'nowrap' }, fmtDT.format(new Date(x.createdAt))))))),
+  ), ...(r.pages > 1 ? [pager()] : []));
+}
+
+async function loadRegistrations() {
   try {
-    const r = await call('/api/staff/registrations');
-    body.replaceChildren(
-      el('dl', { class: 'counters' },
-        el('div', {}, el('dt', {}, 'Cadastros'), el('dd', {}, String(r.total))),
-        el('div', {}, el('dt', {}, 'Aceitam promoções'), el('dd', {}, String(r.marketing))),
-        el('div', {}, el('dt', {}, 'Últimas 24 h'), el('dd', {}, String(r.last24h)))),
-      r.recent.length ? el('div', { class: 'table-wrap' }, el('table', {},
-        el('thead', {}, el('tr', {}, el('th', {}, 'Nome'), el('th', {}, 'WhatsApp'), el('th', {}, 'E-mail'), el('th', {}, 'Promoções'), el('th', {}, 'Quando'))),
-        el('tbody', {}, ...r.recent.map((x) => el('tr', {},
-          el('td', {}, x.name), el('td', {}, `+${x.phone}`), el('td', {}, x.email), el('td', {}, x.marketing ? 'sim' : 'não'), el('td', {}, fmtDT.format(new Date(x.createdAt)))))))) : el('p', { class: 'help' }, 'Nenhum cadastro ainda.'));
+    const qs = new URLSearchParams({ page: String(regsQuery.page) });
+    if (regsQuery.q) qs.set('q', regsQuery.q);
+    if (regsQuery.marketing) qs.set('marketing', '1');
+    const r = await call(`/api/staff/registrations?${qs}`);
+    renderRegStats(r);
+    renderRegList(r);
   } catch (e) {
-    body.replaceChildren(el('p', { class: 'msg' }, errText(e)));
+    $('regs-body').replaceChildren(el('p', { class: 'msg' }, errText(e)));
   }
 }
+$('regs-search').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  regsQuery.q = ev.target.q.value.trim();
+  regsQuery.marketing = ev.target.marketing.checked;
+  regsQuery.page = 1;
+  loadRegistrations();
+});
 $('regs-del-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const email = ev.target.email.value.trim();
@@ -140,9 +209,10 @@ async function refreshOverview() {
       body.replaceChildren(el('p', {}, 'Nenhuma campanha ativa. O jogo funciona sem brinde.'));
       return;
     }
-    body.replaceChildren(
+    body.replaceChildren(...[
       el('p', { class: 'c-name' }, c.isTest ? el('span', { class: 'tag test' }, 'TESTE · sem valor') : null, ' ', c.name, ' ', el('span', { class: `tag st-${c.state}` }, CAMP_PT[c.state])),
       el('p', {}, el('strong', {}, 'Brinde: '), c.rewardName ?? '—', c.quantityPerVoucher ? ` (×${c.quantityPerVoucher})` : ''),
+      el('p', {}, el('strong', {}, 'Regra: '), ruleLabel(c)),
       el('dl', { class: 'counters' },
         el('div', {}, el('dt', {}, 'Disponível'), el('dd', {}, String(c.available))),
         el('div', {}, el('dt', {}, 'Reservado (em jogo)'), el('dd', {}, String(c.reservedCount))),
@@ -153,7 +223,7 @@ async function refreshOverview() {
       r.invitations.length ? el('details', {}, el('summary', {}, 'Últimos convites'),
         el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Conta'), el('th', {}, 'Criado'), el('th', {}, 'Convite'), el('th', {}, 'Partida'), el('th', {}, 'Brinde'))),
           el('tbody', {}, r.invitations.map((i) => el('tr', {}, el('td', {}, i.accountRefHint), el('td', {}, fmtT(i.createdAt)), el('td', {}, i.state), el('td', {}, i.sessionState ?? '—'), el('td', {}, i.voucherState ?? '—')))))) : null,
-    );
+    ].filter(Boolean));
   } catch (e) {
     if (e.code === 'UNAUTHENTICATED') return showLogin();
     $('campaign-body').replaceChildren(el('p', { class: 'msg' }, errText(e)));

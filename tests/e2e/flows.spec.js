@@ -12,8 +12,16 @@ test.describe('jogo livre (sem brinde)', () => {
       await expect(page.locator('.opt[disabled]')).toHaveCount(4);
       if ((await page.locator('#fb-title').textContent()).includes('acertou')) correct++;
       await expect(page.locator('#score-line')).toHaveText(`Pontos: ${correct * 100}`);
+      if (i === 8) break;
       await page.locator('#btn-next').click();
     }
+    // o resultado vai para o cadastro; o servidor recorrige e confere com o que a tela mostrou
+    const [saved] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith('/api/play/result')),
+      page.locator('#btn-next').click(),
+    ]);
+    expect(saved.status()).toBe(200);
+    expect((await saved.json()).correct).toBe(correct);
     await expect(page.locator('#r-score')).toHaveText(String(correct));
     await expect(page.locator('.demo-note')).toContainText('não vale brinde');
     // a palavra "demonstração" não aparece no app
@@ -345,6 +353,13 @@ test.describe('campanha de teste autorizada', () => {
     await mgr.getByLabel('Senha').fill(MANAGER.password);
     await mgr.getByRole('button', { name: 'Entrar' }).click();
     await mgr.getByRole('tab', { name: 'Cadastros' }).click();
+    await expect(mgr.locator('#regs-body table')).toContainText('@teste.local');
+    await expect(mgr.locator('#regs-stats .counters')).toContainText('Partidas');
+    await mgr.getByLabel('Buscar por nome, e-mail ou WhatsApp').fill('nao-existe-ninguem');
+    await mgr.getByRole('button', { name: 'Buscar' }).click();
+    await expect(mgr.locator('#regs-body')).toContainText('Nenhum cadastro encontrado');
+    await mgr.getByLabel('Buscar por nome, e-mail ou WhatsApp').fill('');
+    await mgr.getByRole('button', { name: 'Buscar' }).click();
     await expect(mgr.locator('#regs-body table')).toContainText('@teste.local');
     const [download] = await Promise.all([mgr.waitForEvent('download'), mgr.locator('#regs-csv').click()]);
     expect(download.suggestedFilename()).toMatch(/^cadastros-gio-\d{4}-\d{2}-\d{2}\.csv$/);

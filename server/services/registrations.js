@@ -4,6 +4,7 @@ import { err } from '../errors.js';
 import { tx } from '../db/pool.js';
 import { randomToken, sha256 } from './crypto.js';
 import { audit } from './audit.js';
+import { ALL_PLAYS_SQL, questionStats } from './plays.js';
 
 export const PRIVACY_VERSION = '2026-11-19';
 
@@ -58,13 +59,72 @@ export async function registrationFromToken(db, token) {
 }
 
 // ---------- equipe (somente gerente) ----------
-export async function registrationSummary(pool) {
+const PAGE_SIZE = 50;
+
+// Estatísticas de partidas por cadastro (livres + com brinde) e brindes emitidos.
+const PER_REG_SQL = `
+  WITH plays AS (${ALL_PLAYS_SQL}),
+  agg AS (SELECT registration_id, count(*)::int plays, max(correct)::int best,
+                 round(avg(correct)::numeric, 1)::float avg, max(completed_at) last_play
+          FROM plays GROUP BY registration_id),
+  vou AS (SELECT s.registration_id, count(*)::int vouchers,
+                 count(*) FILTER (WHERE v.state = 'redeemed')::int redeemed
+          FROM vouchers v JOIN quiz_sessions s ON s.id = v.session_id
+          WHERE s.registration_id IS NOT NULL GROUP BY s.registration_id)`;
+
+const PER_REG_COLS = `COALESCE(agg.plays, 0) plays, agg.best, agg.avg, agg.last_play,
+  COALESCE(vou.vouchers, 0) vouchers, COALESCE(vou.redeemed, 0) redeemed`;
+const PER_REG_JOIN = 'LEFT JOIN agg ON agg.registration_id = r.id LEFT JOIN vou ON vou.registration_id = r.id';
+
+/** Filtros da lista: texto (nome, e-mail ou WhatsApp) e só quem aceita promoções. */
+function listFilter({ q, marketing } = {}) {
+  const where = [];
+  const params = [];
+  const text = String(q ?? '').trim().slice(0, 80);
+  if (text) {
+    const like = '%' + text.replace(/[%_\\]/g, (m) => '\\' + m) + '%';
+    params.push(like);
+    let cond = `(r.name ILIKE $${params.length} OR r.email ILIKE $${params.length}`;
+    const digits = text.replace(/\D/g, '');
+    if (digits.length >= 4) { params.push(`%${digits}%`); cond += ` OR r.phone LIKE $${params.length}`; }
+    where.push(`${cond})`);
+  }
+  if (marketing === true || marketing === 'true' || marketing === '1') where.push('r.marketing_consent');
+  return { sql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
+}
+
+export async function registrationSummary(pool, opts = {}) {
   const { rows: [t] } = await pool.query(
     `SELECT count(*)::int total, count(*) FILTER (WHERE marketing_consent)::int marketing,
             count(*) FILTER (WHERE created_at > now() - interval '1 day')::int last24h FROM registrations`);
+  const { rows: [p] } = await pool.query(
+    `WITH plays AS (${ALL_PLAYS_SQL})
+     SELECT count(*)::int plays, count(*) FILTER (WHERE completed_at > now() - interval '1 day')::int plays24h,
+            count(DISTINCT registration_id)::int players, round(avg(correct)::numeric, 1)::float avg_correct,
+            count(*) FILTER (WHERE correct >= 7)::int high FROM plays`);
+  const { rows: dist } = await pool.query(
+    `WITH plays AS (${ALL_PLAYS_SQL}) SELECT correct, count(*)::int n FROM plays GROUP BY correct`);
+  const distribution = Array.from({ length: 9 }, (_, i) => dist.find((d) => d.correct === i)?.n ?? 0);
+
+  const page = Math.max(1, Math.min(10_000, Number.parseInt(opts.page, 10) || 1));
+  const f = listFilter(opts);
+  const { rows: [{ n: matched }] } = await pool.query(`SELECT count(*)::int n FROM registrations r ${f.sql}`, f.params);
   const { rows } = await pool.query(
-    `SELECT name, email, phone, marketing_consent, created_at FROM registrations ORDER BY created_at DESC LIMIT 20`);
-  return { ...t, recent: rows.map((r) => ({ name: r.name, email: r.email, phone: r.phone, marketing: r.marketing_consent, createdAt: r.created_at })) };
+    `${PER_REG_SQL}
+     SELECT r.name, r.email, r.phone, r.marketing_consent, r.created_at, ${PER_REG_COLS}
+     FROM registrations r ${PER_REG_JOIN}
+     ${f.sql} ORDER BY r.created_at DESC, r.id DESC LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}`, f.params);
+  return {
+    ...t,
+    plays: p.plays, plays24h: p.plays24h, players: p.players, avgCorrect: p.avg_correct, highScores: p.high,
+    distribution,
+    questions: await questionStats(pool),
+    matched, page, pageSize: PAGE_SIZE, pages: Math.max(1, Math.ceil(matched / PAGE_SIZE)),
+    recent: rows.map((r) => ({
+      name: r.name, email: r.email, phone: r.phone, marketing: r.marketing_consent, createdAt: r.created_at,
+      plays: r.plays, best: r.best, avg: r.avg, lastPlay: r.last_play, vouchers: r.vouchers, redeemed: r.redeemed,
+    })),
+  };
 }
 
 // Evita injeção de fórmula ao abrir o CSV em planilhas.
@@ -76,12 +136,16 @@ const cell = (v) => {
 
 export async function registrationsCsv(pool, operator) {
   const { rows } = await pool.query(
-    `SELECT name, email, phone, marketing_consent, marketing_consent_at, privacy_version, privacy_accepted_at, created_at
-     FROM registrations ORDER BY created_at`);
+    `${PER_REG_SQL}
+     SELECT r.name, r.email, r.phone, r.marketing_consent, r.marketing_consent_at, r.privacy_version,
+            r.privacy_accepted_at, r.created_at, ${PER_REG_COLS}
+     FROM registrations r ${PER_REG_JOIN} ORDER BY r.created_at`);
   await audit(pool, 'registration.exported', { operatorId: operator.id, details: { rows: rows.length } });
-  const head = ['nome', 'email', 'whatsapp', 'aceita_promocoes', 'promocoes_aceitas_em', 'versao_politica', 'politica_aceita_em', 'cadastrado_em'];
+  const head = ['nome', 'email', 'whatsapp', 'aceita_promocoes', 'promocoes_aceitas_em', 'versao_politica', 'politica_aceita_em', 'cadastrado_em',
+    'partidas', 'melhor_acerto_de_8', 'media_acertos', 'ultima_partida', 'brindes_emitidos', 'brindes_entregues'];
   const lines = rows.map((r) => [r.name, r.email, `+${r.phone}`, r.marketing_consent ? 'sim' : 'nao',
-    r.marketing_consent_at?.toISOString() ?? '', r.privacy_version, r.privacy_accepted_at.toISOString(), r.created_at.toISOString()].map(cell).join(','));
+    r.marketing_consent_at?.toISOString() ?? '', r.privacy_version, r.privacy_accepted_at.toISOString(), r.created_at.toISOString(),
+    r.plays, r.best ?? '', r.avg ?? '', r.last_play?.toISOString() ?? '', r.vouchers, r.redeemed].map(cell).join(','));
   return '﻿' + [head.join(','), ...lines].join('\r\n') + '\r\n';
 }
 

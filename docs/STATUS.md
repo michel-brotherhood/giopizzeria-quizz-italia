@@ -138,6 +138,13 @@ Pedido do usuário: “a cada 15 partidas com 80% de acerto ou mais, ganha algo�
 - Testes: integração **47/47** (+5: pontuação mínima com devolução de reserva e idempotência; sequência `every_n` N=3 com não qualificadas; **20 conclusões simultâneas com N=5 → exatamente 4 vouchers**; trava/versão da regra e validação; cliente não força prêmio enviando pontuação). E2E: regra exibida e resultado “não deu brinde” sem voucher, com a reserva devolvida.
 - **Resultado (Chromium + SwiftShader):** E2E completo 30/31 — a falha foi **defeito real**: em 320 px, a marca “✓ Sua resposta, correta” (sem quebra) ao lado de alternativa longa criava 2 px de rolagem horizontal → marca passou a quebrar linha e a coluna do texto a encolher; verificado com 48 retornos de acerto em 320 px (0 px de excesso) e o teste de 320 px + zoom 200% reexecutados (passaram). Unit 34/34, integração 47/47, lint ok.
 
+## Partidas guardadas no cadastro e painel de Cadastros (19/11/2026)
+- Migration `004_free_plays.sql`: partidas sem brinde passam a ser gravadas no cadastro. O aparelho envia só as alternativas escolhidas (`POST /api/play/result`, exige cookie de cadastro); o servidor valida a rodada (8 perguntas existentes, sem repetição, padrão de categorias), recorrige e guarda. Idempotente por `playId`; limite de 40 partidas/dia por cadastro. Não gera brinde.
+- Aba **Cadastros** (só gerente): totais (cadastros, promoções, partidas, média de acertos, 7–8 acertos), gráfico de acertos por partida, 10 perguntas mais erradas (mín. 3 respostas), lista completa com busca (nome/e-mail/WhatsApp), filtro "só quem aceita promoções", 50 por página, link de WhatsApp, partidas/melhor/brindes por pessoa. CSV ganhou partidas, melhor acerto, média, última partida, brindes emitidos/entregues.
+- Excluir o cadastro apaga as partidas sem brinde dele (ON DELETE CASCADE).
+- Corrigido: "null" aparecia no cartão da campanha do painel; o cartão agora mostra a regra de premiação.
+- Testes: integração 51/51 (novo `free-plays.test.js`, 4 casos), unitários 34/34, lint ok; E2E da partida completa (confere que o servidor recorrigiu igual à tela) e da aba Cadastros (busca) passando.
+
 ## Limitações conhecidas
 - Se o cliente perder o código **e** a credencial ficar ilegível (troca de `SESSION_SECRET`), a equipe não tem busca por conta para entregar; definir procedimento antes da campanha real.
 - Limite real é por convite/conta, não por pessoa física; QR/print pode ser repassado (equipe confere conta e status).
