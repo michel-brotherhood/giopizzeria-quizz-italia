@@ -106,8 +106,8 @@ export function validateBank(bank, sourceIds) {
     if (!q.explanation?.trim()) errors.push(`${q.id}: sem explicação`);
     if (sourceIds && !sourceIds.has(q.sourceId)) errors.push(`${q.id}: fonte não resolvida ${q.sourceId}`);
   }
-  if (counts.pizza !== 16 || counts.cucina !== 8 || counts.dolci !== 8) {
-    errors.push(`distribuição esperada 16/8/8, obtida ${counts.pizza}/${counts.cucina}/${counts.dolci}`);
+  if (counts.pizza < 16 || counts.cucina < 8 || counts.dolci < 8) {
+    errors.push(`distribuição mínima 16/8/8, obtida ${counts.pizza}/${counts.cucina}/${counts.dolci}`);
   }
   return errors;
 }

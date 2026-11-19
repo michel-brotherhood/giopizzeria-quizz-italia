@@ -72,3 +72,8 @@ td.num, th.num { text-align: right; white-space: nowrap; }
 td.nowrap { white-space: nowrap; }
 .pager { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin: 10px 0; flex-wrap: wrap; }
 body:has(#panel-regs:not([hidden])) .s-foot { max-width: 1120px; }
+.daily { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 2px; align-items: end; height: 80px; margin: 6px 0 2px; }
+.daily div { height: 100%; display: flex; align-items: flex-end; }
+.daily i { display: block; width: 100%; background: var(--vermelho); border-radius: 2px 2px 0 0; min-height: 1px; }
+.daily-labels { display: flex; justify-content: space-between; font-size: .78rem; font-weight: 700; margin-bottom: 8px; }
+.s-btn.small { min-height: 36px; padding: 0 10px; font-size: .85rem; white-space: nowrap; }

@@ -50,6 +50,7 @@ const M = {
   REGISTRATION_REQUIRED: [401, 'Faça seu cadastro para jogar.'],
   REGISTRATION_INVALID: [400, 'Confira os dados do cadastro.'],
   REGISTRATION_NOT_FOUND: [404, 'Nenhum cadastro com este e-mail.'],
+  OPTOUT_INVALID: [404, 'Link não reconhecido. Escreva para privacidade@giopizzeria.com.br para parar de receber promoções.'],
   PLAY_INVALID: [400, 'Resultado de partida inválido.'],
   PLAY_LIMIT: [429, 'Muitas partidas registradas hoje. Tente amanhã.'],
 };

@@ -115,6 +115,25 @@ function renderRegStats(r) {
       counter('Média de acertos', r.avgCorrect == null ? null : `${String(r.avgCorrect).replace('.', ',')}/8`),
       counter('Com 7 ou 8 acertos', r.highScores)),
   ];
+  const dmax = Math.max(1, ...r.daily.map((d) => d.n));
+  const dayLabel = (d) => `${d.day.slice(8, 10)}/${d.day.slice(5, 7)}`;
+  kids.push(el('h3', { class: 'sub' }, 'Cadastros por dia (últimos 30 dias)'),
+    el('div', { class: 'daily', role: 'img', 'aria-label': r.daily.filter((d) => d.n).map((d) => `${dayLabel(d)}: ${d.n}`).join('; ') || 'Nenhum cadastro no período' },
+      ...r.daily.map((d) => el('div', { title: `${dayLabel(d)}: ${d.n}` },
+        el('i', { style: `height:${Math.round((d.n / dmax) * 100)}%` })))),
+    el('div', { class: 'daily-labels', 'aria-hidden': 'true' },
+      el('span', {}, dayLabel(r.daily[0])), el('span', {}, dayLabel(r.daily[r.daily.length - 1]))));
+  if (r.sources.length) {
+    const base = `${location.origin}/?origem=`;
+    kids.push(el('h3', { class: 'sub' }, 'De onde vêm os cadastros'),
+      el('div', { class: 'table-wrap' }, el('table', {},
+        el('thead', {}, el('tr', {}, el('th', {}, 'Origem'), el('th', { class: 'num' }, 'Cadastros'), el('th', { class: 'num' }, 'Aceitam promoções'))),
+        el('tbody', {}, ...r.sources.map((x) => el('tr', {},
+          el('td', {}, x.source || 'sem origem (link direto)'), el('td', { class: 'num' }, String(x.n)), el('td', { class: 'num' }, String(x.marketing))))))),
+      el('p', { class: 'help' }, 'Para saber de onde vem cada pessoa, divulgue o quiz com links diferentes por canal, por exemplo ',
+        el('span', { class: 'mono' }, `${base}mesa`), ', ', el('span', { class: 'mono' }, `${base}instagram`), ' ou ',
+        el('span', { class: 'mono' }, `${base}whatsapp`), '. Use letras minúsculas, números e hífen (até 24).'));
+  }
   if (r.plays > 0) {
     kids.push(el('h3', { class: 'sub' }, 'Acertos por partida'),
       el('div', { class: 'dist', role: 'img', 'aria-label': r.distribution.map((n, i) => `${i} acertos: ${n}`).join('; ') },
@@ -151,7 +170,7 @@ function renderRegList(r) {
     el('thead', {}, el('tr', {},
       el('th', {}, 'Nome'), el('th', {}, 'WhatsApp'), el('th', {}, 'E-mail'), el('th', {}, 'Promoções'),
       el('th', { class: 'num' }, 'Partidas'), el('th', { class: 'num' }, 'Melhor'), el('th', { class: 'num' }, 'Brindes'),
-      el('th', {}, 'Última partida'), el('th', {}, 'Cadastro'))),
+      el('th', {}, 'Última partida'), el('th', {}, 'Cadastro'), el('th', {}, 'Origem'), el('th', {}, 'Link “parar de receber”'))),
     el('tbody', {}, ...r.recent.map((x) => el('tr', {},
       el('td', {}, x.name),
       el('td', { class: 'nowrap' }, el('a', { href: `https://wa.me/${x.phone}`, target: '_blank', rel: 'noopener noreferrer' }, fmtPhone(x.phone))),
@@ -161,8 +180,19 @@ function renderRegList(r) {
       el('td', { class: 'num' }, x.best == null ? '—' : `${x.best}/8`),
       el('td', { class: 'num' }, x.vouchers ? `${x.redeemed}/${x.vouchers} entregue${x.redeemed === 1 ? '' : 's'}` : '—'),
       el('td', { class: 'nowrap' }, x.lastPlay ? fmtDT.format(new Date(x.lastPlay)) : '—'),
-      el('td', { class: 'nowrap' }, fmtDT.format(new Date(x.createdAt))))))),
+      el('td', { class: 'nowrap' }, fmtDT.format(new Date(x.createdAt))),
+      el('td', {}, x.source ?? '—'),
+      el('td', {}, x.optoutUrl ? el('button', { class: 's-btn small', type: 'button', onclick: (ev) => copyLink(ev.currentTarget, x.optoutUrl) }, 'Copiar link') : '—'))))),
   ), ...(r.pages > 1 ? [pager()] : []));
+}
+
+async function copyLink(btn, url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    btn.textContent = 'Copiado';
+  } catch {
+    window.prompt('Copie o link:', url);
+  }
 }
 
 async function loadRegistrations() {

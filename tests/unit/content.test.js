@@ -4,9 +4,11 @@ import { validateBank } from '../../shared/quiz.js';
 import { SOURCES } from '../../shared/sources.js';
 
 describe('banco de perguntas', () => {
-  it('estrutura válida: 32 entradas 16/8/8, 4 opções únicas, correta existente e fontes resolvidas', () => {
+  it('estrutura válida: 44 entradas 24/12/8, 4 opções únicas, correta existente e fontes resolvidas', () => {
     expect(validateBank(bank, new Set(Object.keys(SOURCES)))).toEqual([]);
-    expect(bank.questions).toHaveLength(32);
+    expect(bank.questions).toHaveLength(44);
+    const n = (c) => bank.questions.filter((q) => q.category === c).length;
+    expect([n('pizza'), n('cucina'), n('dolci')]).toEqual([24, 12, 8]);
   });
 
   it('fontes são URLs https', () => {

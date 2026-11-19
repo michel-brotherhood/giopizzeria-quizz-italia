@@ -23,10 +23,10 @@ describe('sorteio', () => {
     expect(ids.size).toBeGreaterThan(40);
   });
 
-  it('todas as 32 perguntas aparecem em algum sorteio', () => {
+  it('todas as perguntas do banco aparecem em algum sorteio', () => {
     const seen = new Set();
-    for (let s = 1; s < 500; s++) drawRound(Q, seededRng(s)).forEach((q) => seen.add(q.id));
-    expect(seen.size).toBe(32);
+    for (let s = 1; s < 1500; s++) drawRound(Q, seededRng(s)).forEach((q) => seen.add(q.id));
+    expect(seen.size).toBe(Q.length);
   });
 
   it('prioriza perguntas ainda não vistas sem nunca falhar', () => {

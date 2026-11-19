@@ -5,7 +5,7 @@ import { PLAYER_COOKIE, STAFF_COOKIE, REG_COOKIE, cookieOpts, requirePlayer, req
 import { campaignView, getActiveCampaign, getCurrentForStaff, createCampaign, updateCampaign, setCampaignState, missingForActivation } from '../services/campaigns.js';
 import { exchangeInvitation, getSessionState, answerQuestion, completeSession } from '../services/player.js';
 import { login, logout, operatorView, createInvitation, lookupVoucher, redeemVoucher, recentInvitations } from '../services/staff.js';
-import { register, registrationFromToken, registrationSummary, registrationsCsv, deleteRegistration, PRIVACY_VERSION } from '../services/registrations.js';
+import { register, registrationFromToken, registrationSummary, registrationsCsv, deleteRegistration, optOut, touchRegistration, PRIVACY_VERSION } from '../services/registrations.js';
 import { recordFreePlay } from '../services/plays.js';
 import QRCode from 'qrcode';
 
@@ -45,6 +45,11 @@ export function apiRouter(pool) {
     res.json({ ok: true });
   }));
 
+  // Parar de receber promoções pelo link pessoal (token vai no fragmento da URL, nunca em log).
+  r.post('/promocoes/sair', limits.exchange(), wrap(async (req, res) => {
+    res.json(await optOut(pool, req.body?.token));
+  }));
+
   // Resultado de partida sem brinde: o servidor recorrige e guarda no cadastro (não gera brinde).
   r.post('/play/result', limits.exchange(), wrap(async (req, res) => {
     const reg = await registrationFromToken(pool, req.cookies?.[REG_COOKIE]);
@@ -57,6 +62,7 @@ export function apiRouter(pool) {
     const reg = await registrationFromToken(pool, req.cookies?.[REG_COOKIE]);
     if (!reg) throw err('REGISTRATION_REQUIRED');
     const out = await exchangeInvitation(pool, req.body?.token, reg.id);
+    await touchRegistration(pool, reg.id);
     res.cookie(PLAYER_COOKIE, out.credential, cookieOpts(PLAYER_COOKIE_MS));
     res.json({ resumed: out.resumed, ...(await getSessionState(pool, out.sessionId)) });
   }));

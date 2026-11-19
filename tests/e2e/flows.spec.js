@@ -31,7 +31,8 @@ test.describe('jogo livre (sem brinde)', () => {
   });
 
   test('cadastro obrigatório antes de jogar: validação, política, promoções opcionais e lembrança no aparelho', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?origem=qr-mesa');
+    await expect(page).toHaveURL(/\/$/); // rótulo de origem sai da barra de endereço
     await page.locator('#btn-start').click();
     await expect(page.locator('[data-view="register"]')).toBeVisible();
     await expect(page.locator('#q-count')).toBeHidden();
@@ -50,8 +51,8 @@ test.describe('jogo livre (sem brinde)', () => {
     await page.locator('#reg-privacy').check();
     await page.getByRole('button', { name: 'Cadastrar e começar' }).click();
     await expect(page.locator('#q-count')).toHaveText('Pergunta 1 de 8');
-    const [r] = await db(`SELECT name, phone, marketing_consent, privacy_version FROM registrations WHERE email='maria-e2e@teste.local'`);
-    expect(r).toMatchObject({ name: 'Maria Teste', phone: '5521988887777', marketing_consent: false });
+    const [r] = await db(`SELECT name, phone, marketing_consent, privacy_version, source FROM registrations WHERE email='maria-e2e@teste.local'`);
+    expect(r).toMatchObject({ name: 'Maria Teste', phone: '5521988887777', marketing_consent: false, source: 'qr-mesa' });
     expect(r.privacy_version).toBeTruthy();
     // aparelho lembrado: nova visita vai direto ao jogo, com opção "Não é você?"
     await page.evaluate(() => sessionStorage.clear());
@@ -68,6 +69,22 @@ test.describe('jogo livre (sem brinde)', () => {
     await expect(page.locator('main')).toContainText('privacidade@giopizzeria.com.br');
     await expect(page.locator('main')).toContainText('Seus direitos');
     await expect(page.locator('.doc-foot')).toContainText('©');
+  });
+
+  test('link pessoal "parar de receber" retira a autorização só depois do clique', async ({ page }) => {
+    const email = `sair-${Date.now()}@teste.local`;
+    const r = await page.request.post('/api/register', { data: { name: 'Rui Sair', email, phone: '21 97000-1111', acceptPrivacy: true, marketingConsent: true } });
+    expect(r.status()).toBe(201);
+    const [{ optout_token: token }] = await db('SELECT optout_token FROM registrations WHERE email=$1', [email]);
+    await page.goto(`/sair/#t=${token}`);
+    await expect(page).toHaveURL(/\/sair\/$/); // token sai da barra de endereço
+    await expect(page.getByRole('button', { name: 'Não quero mais receber' })).toBeVisible();
+    expect((await db('SELECT marketing_consent FROM registrations WHERE email=$1', [email]))[0].marketing_consent).toBe(true);
+    await page.getByRole('button', { name: 'Não quero mais receber' }).click();
+    await expect(page.locator('#s-msg')).toContainText('não vai mais receber');
+    expect((await db('SELECT marketing_consent FROM registrations WHERE email=$1', [email]))[0].marketing_consent).toBe(false);
+    await page.goto('/sair/');
+    await expect(page.locator('#s-msg')).toContainText('incompleto');
   });
 
   test('storage corrompido não quebra a abertura', async ({ page }) => {

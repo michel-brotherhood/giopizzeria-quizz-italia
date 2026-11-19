@@ -29,4 +29,6 @@ export const config = {
   COOKIE_SECURE: bool(env.COOKIE_SECURE, isProd),
   SERVE_STATIC: bool(env.SERVE_STATIC, isProd),
   RATE_LIMIT_ENABLED: bool(env.RATE_LIMIT_ENABLED, true),
+  // Cadastros sem nenhuma atividade por este número de meses são apagados (Política de Privacidade, seção 5).
+  RETENTION_MONTHS: Math.max(1, Number(env.RETENTION_MONTHS || 24)),
 };

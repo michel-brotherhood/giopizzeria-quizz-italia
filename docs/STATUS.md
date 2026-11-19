@@ -145,6 +145,14 @@ Pedido do usuário: “a cada 15 partidas com 80% de acerto ou mais, ganha algo�
 - Corrigido: "null" aparecia no cartão da campanha do painel; o cartão agora mostra a regra de premiação.
 - Testes: integração 51/51 (novo `free-plays.test.js`, 4 casos), unitários 34/34, lint ok; E2E da partida completa (confere que o servidor recorrigiu igual à tela) e da aba Cadastros (busca) passando.
 
+## Descadastro, retenção, origem e banco ampliado (19/11/2026)
+- Migration `005_optout_retention_source.sql`: `optout_token` (aleatório, 122 bits, 32 caracteres hex), `source` (origem) e `last_activity_at` em `registrations`.
+- **Parar de receber promoções**: página `/sair/#t=TOKEN` (token no fragmento, fora de logs e Referer; só age após o clique). `POST /api/promocoes/sair` é idempotente e não revela de quem é o cadastro. O link pessoal aparece na planilha (`link_para_parar_de_receber`) e no botão "Copiar link" da aba Cadastros, só para quem aceita promoções.
+- **Retenção**: cadastros sem atividade (cadastro, partida ou convite) há `RETENTION_MONTHS` meses (padrão 24) são apagados pela rotina periódica (no máximo 1x/hora); auditoria guarda só a contagem. Política de Privacidade revisada (`PRIVACY_VERSION = 2026-11-19.2`): prazo de 24 meses, origem do acesso, link de descadastro.
+- **Origem**: `?origem=rotulo` no link do quiz (ex.: `?origem=mesa`, `?origem=instagram`) é guardado com o cadastro (o primeiro vence; rótulo sai da barra de endereço). Painel mostra cadastros por origem e por dia (30 dias).
+- **Banco de perguntas 1.1.0**: 44 perguntas (pizza 24, cucina 12, dolci 8). As 12 novas usam fatos conferidos em 19/11/2026 nas páginas da AVPN (receita e decálogo: forno a lenha, 430–480 °C, 60–90 s, até 35 cm, massa só com farinha/água/sal/fermento, fermentação mínima de 8 h, mozzarella de búfala ou fior di latte, azeite em espiral) e do turismo de Gênova (pesto: pilão de madeira de oliveira, pinoli, parmigiano/grana e pecorino sardo, manjericão genovês DOP). Doces não foram ampliados: as fontes de tiramisù e café não abriram na verificação. O validador agora exige mínimo 16/8/8.
+- Testes: unitários 34/34, integração 54/54 (novo `optout-retention.test.js`), lint ok.
+
 ## Limitações conhecidas
 - Se o cliente perder o código **e** a credencial ficar ilegível (troca de `SESSION_SECRET`), a equipe não tem busca por conta para entregar; definir procedimento antes da campanha real.
 - Limite real é por convite/conta, não por pessoa física; QR/print pode ser repassado (equipe confere conta e status).

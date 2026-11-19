@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "1.0.0",
+  "contentVersion": "1.1.0",
   "questions": [
     {
       "id": "pizza-001",
@@ -928,6 +928,354 @@
       "correctOptionId": "a",
       "explanation": "Tiramisù pertence ao universo dos doces italianos.",
       "sourceId": "tiramisu",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-017",
+      "category": "pizza",
+      "topicGroup": "forno",
+      "difficulty": "facil",
+      "question": "Em que tipo de forno a pizza napolitana tradicional é assada?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Forno elétrico de esteira"
+        },
+        {
+          "id": "c",
+          "text": "Forno de micro-ondas"
+        },
+        {
+          "id": "d",
+          "text": "Assadeira em forno a gás doméstico"
+        },
+        {
+          "id": "a",
+          "text": "Forno a lenha"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A tradição napolitana assa a pizza diretamente no piso do forno a lenha, sem assadeira.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-018",
+      "category": "pizza",
+      "topicGroup": "forno",
+      "difficulty": "intermediaria",
+      "question": "Qual é a temperatura aproximada do forno para a pizza napolitana?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Cerca de 430 a 480 °C"
+        },
+        {
+          "id": "b",
+          "text": "Cerca de 180 °C"
+        },
+        {
+          "id": "c",
+          "text": "Cerca de 250 °C"
+        },
+        {
+          "id": "d",
+          "text": "Cerca de 120 °C"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O forno trabalha muito quente, por volta de 430 a 480 °C entre o piso e a cúpula.",
+      "sourceId": "avpn-recipe",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-019",
+      "category": "pizza",
+      "topicGroup": "cottura",
+      "difficulty": "intermediaria",
+      "question": "Quanto tempo a pizza napolitana costuma ficar no forno?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Meia hora"
+        },
+        {
+          "id": "a",
+          "text": "De 60 a 90 segundos"
+        },
+        {
+          "id": "b",
+          "text": "De 8 a 10 minutos"
+        },
+        {
+          "id": "c",
+          "text": "Cerca de 20 minutos"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Com o forno tão quente, a pizza fica pronta em 60 a 90 segundos.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-020",
+      "category": "pizza",
+      "topicGroup": "misure",
+      "difficulty": "intermediaria",
+      "question": "Pela tradição da AVPN, qual é o diâmetro máximo de uma pizza napolitana?",
+      "options": [
+        {
+          "id": "c",
+          "text": "50 cm"
+        },
+        {
+          "id": "d",
+          "text": "60 cm"
+        },
+        {
+          "id": "a",
+          "text": "35 cm"
+        },
+        {
+          "id": "b",
+          "text": "20 cm"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A pizza napolitana não deve passar de 35 cm de diâmetro.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-021",
+      "category": "pizza",
+      "topicGroup": "impasto",
+      "difficulty": "facil",
+      "question": "Quais ingredientes formam a massa da pizza napolitana tradicional?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Farinha, ovos, leite e manteiga"
+        },
+        {
+          "id": "c",
+          "text": "Farinha, açúcar e fermento químico"
+        },
+        {
+          "id": "d",
+          "text": "Fubá, água e azeite"
+        },
+        {
+          "id": "a",
+          "text": "Farinha, água, sal e fermento"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A massa leva só farinha, água, sal e fermento.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-022",
+      "category": "pizza",
+      "topicGroup": "impasto",
+      "difficulty": "intermediaria",
+      "question": "Por quanto tempo, no mínimo, a massa da pizza napolitana fermenta?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pelo menos 8 horas"
+        },
+        {
+          "id": "b",
+          "text": "10 minutos"
+        },
+        {
+          "id": "c",
+          "text": "Meia hora"
+        },
+        {
+          "id": "d",
+          "text": "Ela não fermenta"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A massa descansa e fermenta por no mínimo 8 horas antes de ser aberta.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-023",
+      "category": "pizza",
+      "topicGroup": "formaggio",
+      "difficulty": "facil",
+      "question": "Quais queijos podem cobrir a pizza napolitana tradicional?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Queijo coalho"
+        },
+        {
+          "id": "a",
+          "text": "Mozzarella de búfala ou fior di latte"
+        },
+        {
+          "id": "b",
+          "text": "Cheddar ou queijo prato"
+        },
+        {
+          "id": "c",
+          "text": "Requeijão cremoso"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A tradição usa mozzarella de búfala, em fatias, ou fior di latte, em tiras.",
+      "sourceId": "avpn-recipe",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-024",
+      "category": "pizza",
+      "topicGroup": "olio",
+      "difficulty": "intermediaria",
+      "question": "Como o azeite extravirgem é colocado sobre a pizza napolitana?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Misturado ao molho de tomate antes"
+        },
+        {
+          "id": "d",
+          "text": "No prato, depois de servida"
+        },
+        {
+          "id": "a",
+          "text": "Em movimento de espiral"
+        },
+        {
+          "id": "b",
+          "text": "Só na borda, com pincel"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O azeite extravirgem é distribuído em espiral sobre a pizza.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-009",
+      "category": "cucina",
+      "topicGroup": "pesto",
+      "difficulty": "intermediaria",
+      "question": "No pesto genovese feito à moda tradicional, de que é feito o pilão?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Plástico"
+        },
+        {
+          "id": "c",
+          "text": "Aço inox"
+        },
+        {
+          "id": "d",
+          "text": "Vidro"
+        },
+        {
+          "id": "a",
+          "text": "Madeira de oliveira"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Pela receita tradicional, o pesto é feito em pilão de mármore com socador de madeira de oliveira.",
+      "sourceId": "pesto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-010",
+      "category": "cucina",
+      "topicGroup": "pesto-ingredienti",
+      "difficulty": "facil",
+      "question": "Qual semente entra no pesto genovese tradicional?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pinoli (pinhões)"
+        },
+        {
+          "id": "b",
+          "text": "Amendoim"
+        },
+        {
+          "id": "c",
+          "text": "Gergelim"
+        },
+        {
+          "id": "d",
+          "text": "Semente de girassol"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Os pinoli, pinhões do pinheiro-manso, fazem parte da receita.",
+      "sourceId": "pesto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-011",
+      "category": "cucina",
+      "topicGroup": "pesto-ingredienti",
+      "difficulty": "intermediaria",
+      "question": "Quais queijos entram no pesto genovese tradicional?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Provolone e brie"
+        },
+        {
+          "id": "a",
+          "text": "Parmigiano (ou grana padano) e pecorino sardo"
+        },
+        {
+          "id": "b",
+          "text": "Mozzarella e ricota"
+        },
+        {
+          "id": "c",
+          "text": "Gorgonzola e mascarpone"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A receita combina um queijo curado, parmigiano ou grana padano, com pecorino sardo.",
+      "sourceId": "pesto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-012",
+      "category": "cucina",
+      "topicGroup": "pesto-ingredienti",
+      "difficulty": "intermediaria",
+      "question": "Qual manjericão a receita tradicional do pesto genovese indica?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Manjericão-tailandês"
+        },
+        {
+          "id": "d",
+          "text": "Qualquer erva seca"
+        },
+        {
+          "id": "a",
+          "text": "Manjericão genovês DOP"
+        },
+        {
+          "id": "b",
+          "text": "Manjericão roxo"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O pesto tradicional usa folhas de manjericão genovês DOP.",
+      "sourceId": "pesto",
       "reviewStatus": "proposta-editorial"
     }
   ]

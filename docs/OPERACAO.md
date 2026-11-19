@@ -64,6 +64,9 @@ O app registra só método, caminho (sem query), status e duração para `/api/*
 ## Cadastros de clientes (LGPD)
 - Gerente: painel `/equipe/` → aba **Cadastros** → **Baixar planilha (CSV)**. Use para promoções **apenas** as linhas com `aceita_promocoes = sim`.
 - A aba também mostra partidas de cada pessoa (melhor acerto, brindes), busca por nome/e-mail/WhatsApp e as perguntas que o público mais erra.
+- Ao enviar promoções, inclua o link pessoal “parar de receber” de cada pessoa (coluna `link_para_parar_de_receber` ou botão “Copiar link”).
+- Links por canal: divulgue `https://quizz.giopizzeria.com.br/?origem=mesa`, `?origem=instagram`, `?origem=whatsapp` etc. A aba Cadastros mostra quantos cadastros vieram de cada um.
+- Retenção: cadastros sem atividade há 24 meses são apagados automaticamente (variável `RETENTION_MONTHS` no Dokku muda o prazo; mudar exige atualizar a Política de Privacidade).
 - Pedido de exclusão: aba Cadastros → “Excluir cadastro a pedido do cliente” (por e-mail). A partida e o brinde já emitidos continuam válidos, sem o vínculo pessoal.
 - Pedidos de acesso/correção chegam em `privacidade@giopizzeria.com.br` — **criar e monitorar essa caixa**; responder em até 15 dias (prazo declarado na política).
 - Mudou a política? Atualize o texto e `PRIVACY_VERSION` em `server/services/registrations.js` (o próximo cadastro registra a nova versão).

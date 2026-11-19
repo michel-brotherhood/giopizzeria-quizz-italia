@@ -13,6 +13,7 @@ export default defineConfig({
         main: path.resolve(import.meta.dirname, 'web/index.html'),
         equipe: path.resolve(import.meta.dirname, 'web/equipe/index.html'),
         privacidade: path.resolve(import.meta.dirname, 'web/privacidade/index.html'),
+        sair: path.resolve(import.meta.dirname, 'web/sair/index.html'),
       },
     },
   },

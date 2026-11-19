@@ -59,6 +59,7 @@ export function createApp(pool, { log = console.log, serveStatic = config.SERVE_
     if (fs.existsSync(path.join(dist, 'index.html'))) {
       app.get(['/equipe', '/equipe/'], page('equipe/index.html'));
       app.get(['/privacidade', '/privacidade/'], page('privacidade/index.html'));
+      app.get(['/sair', '/sair/'], page('sair/index.html'));
       app.get('/', page('index.html'));
     }
   }

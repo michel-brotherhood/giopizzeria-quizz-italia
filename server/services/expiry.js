@@ -2,6 +2,9 @@
 // Usa os mesmos bloqueios e atualizações condicionais dos endpoints (idempotente).
 import { tx } from '../db/pool.js';
 import { audit } from './audit.js';
+import { purgeInactive } from './registrations.js';
+
+let lastPurge = 0;
 
 export async function sweepExpired(pool, batch = 100) {
   const out = { sessions: 0, vouchers: 0, invitations: 0 };
@@ -49,6 +52,11 @@ export function startExpiryLoop(pool, seconds, log = console.log) {
     running = true;
     try {
       const r = await sweepExpired(pool);
+      if (Date.now() - lastPurge > 3600_000) {
+        lastPurge = Date.now();
+        const n = await purgeInactive(pool);
+        if (n) log(`[retencao] cadastros inativos apagados: ${n}`);
+      }
       if (r.sessions || r.vouchers) log(`[expiry] sessões=${r.sessions} vouchers=${r.vouchers} convites=${r.invitations}`);
     } catch (e) {
       log(`[expiry] falha: ${e.message}`);

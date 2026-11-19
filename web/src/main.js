@@ -31,6 +31,17 @@ const STEP_LABELS = ['Massa', 'Abertura', 'Molho', 'Mozzarella', 'Manjericão', 
 const server = new ServerAdapter();
 const demo = new DemoAdapter(bank.questions);
 
+// Origem do acesso (?origem=instagram, ?origem=mesa…): guardada na aba e enviada com o cadastro.
+{
+  const u = new URL(location.href);
+  const o = (u.searchParams.get('origem') ?? '').trim().toLowerCase();
+  if (/^[a-z0-9-]{1,24}$/.test(o)) store.set('gio.origem', o);
+  if (u.searchParams.has('origem')) {
+    u.searchParams.delete('origem');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }
+}
+
 const ctx = {
   mode: null,            // 'demo' | 'server'
   campaign: null,        // campanha pública atual (GET /api/campaign/current)
@@ -602,6 +613,7 @@ async function submitRegistration(ev) {
   const body = {
     name: f.name.value, phone: f.phone.value, email: f.email.value,
     acceptPrivacy: f.acceptPrivacy.checked, marketingConsent: f.marketingConsent.checked,
+    source: store.get('gio.origem') ?? undefined,
   };
   const local = {};
   if (body.name.trim().length < 2) local.name = 'Informe seu nome.';

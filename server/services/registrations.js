@@ -4,9 +4,10 @@ import { err } from '../errors.js';
 import { tx } from '../db/pool.js';
 import { randomToken, sha256 } from './crypto.js';
 import { audit } from './audit.js';
+import { config } from '../config.js';
 import { ALL_PLAYS_SQL, questionStats } from './plays.js';
 
-export const PRIVACY_VERSION = '2026-11-19';
+export const PRIVACY_VERSION = '2026-11-19.2';
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}\.[^\s@]{2,}$/;
 
@@ -22,7 +23,10 @@ export function normalizeRegistration(body = {}) {
   if (!/^55[1-9][0-9][0-9]{8,9}$/.test(phone)) fields.phone = 'Informe um WhatsApp com DDD.';
   if (body.acceptPrivacy !== true) fields.acceptPrivacy = 'É preciso aceitar a Política de Privacidade para participar.';
   if (Object.keys(fields).length) throw err('REGISTRATION_INVALID', { fields });
-  return { name, email, phone, marketing: body.marketingConsent === true };
+  // Origem (link usado para chegar ao quiz): só um rótulo curto, nunca obrigatório.
+  const src = String(body.source ?? '').trim().toLowerCase();
+  const source = /^[a-z0-9-]{1,24}$/.test(src) ? src : null;
+  return { name, email, phone, marketing: body.marketingConsent === true, source };
 }
 
 const firstName = (name) => name.split(' ')[0];
@@ -32,16 +36,17 @@ export async function register(pool, body) {
   const d = normalizeRegistration(body);
   return tx(pool, async (c) => {
     const { rows: [row] } = await c.query(
-      `INSERT INTO registrations (name, email, phone, marketing_consent, marketing_consent_at, privacy_version)
-       VALUES ($1,$2,$3,$4, CASE WHEN $4 THEN now() END, $5)
+      `INSERT INTO registrations (name, email, phone, marketing_consent, marketing_consent_at, privacy_version, source)
+       VALUES ($1,$2,$3,$4, CASE WHEN $4 THEN now() END, $5, $6)
        ON CONFLICT (lower(email)) DO UPDATE SET
          name = EXCLUDED.name, phone = EXCLUDED.phone,
          marketing_consent = EXCLUDED.marketing_consent,
          marketing_consent_at = CASE WHEN EXCLUDED.marketing_consent
            THEN COALESCE(registrations.marketing_consent_at, now()) END,
-         privacy_version = EXCLUDED.privacy_version, privacy_accepted_at = now(), updated_at = now()
+         privacy_version = EXCLUDED.privacy_version, privacy_accepted_at = now(), updated_at = now(),
+         last_activity_at = now(), source = COALESCE(registrations.source, EXCLUDED.source)
        RETURNING id, name, (xmax = 0) AS inserted`,
-      [d.name, d.email, d.phone, d.marketing, PRIVACY_VERSION],
+      [d.name, d.email, d.phone, d.marketing, PRIVACY_VERSION, d.source],
     );
     const token = randomToken();
     await c.query('INSERT INTO registration_credentials (token_hash, registration_id) VALUES ($1,$2)', [sha256(token), row.id]);
@@ -105,24 +110,37 @@ export async function registrationSummary(pool, opts = {}) {
   const { rows: dist } = await pool.query(
     `WITH plays AS (${ALL_PLAYS_SQL}) SELECT correct, count(*)::int n FROM plays GROUP BY correct`);
   const distribution = Array.from({ length: 9 }, (_, i) => dist.find((d) => d.correct === i)?.n ?? 0);
+  // Cadastros por dia (últimos 30 dias, horário de Brasília) e por origem.
+  const { rows: daily } = await pool.query(
+    `SELECT to_char(d, 'YYYY-MM-DD') AS day, count(r.id)::int AS n
+     FROM generate_series(((now() AT TIME ZONE 'America/Sao_Paulo')::date - 29)::timestamp, (now() AT TIME ZONE 'America/Sao_Paulo')::date::timestamp, interval '1 day') d
+     LEFT JOIN registrations r ON (r.created_at AT TIME ZONE 'America/Sao_Paulo')::date = d::date
+     GROUP BY d ORDER BY d`);
+  const { rows: sources } = await pool.query(
+    `SELECT COALESCE(source, '') source, count(*)::int n, count(*) FILTER (WHERE marketing_consent)::int marketing
+     FROM registrations GROUP BY 1 ORDER BY n DESC, 1 LIMIT 20`);
 
   const page = Math.max(1, Math.min(10_000, Number.parseInt(opts.page, 10) || 1));
   const f = listFilter(opts);
   const { rows: [{ n: matched }] } = await pool.query(`SELECT count(*)::int n FROM registrations r ${f.sql}`, f.params);
   const { rows } = await pool.query(
     `${PER_REG_SQL}
-     SELECT r.name, r.email, r.phone, r.marketing_consent, r.created_at, ${PER_REG_COLS}
+     SELECT r.name, r.email, r.phone, r.marketing_consent, r.created_at, r.source, r.optout_token, ${PER_REG_COLS}
      FROM registrations r ${PER_REG_JOIN}
      ${f.sql} ORDER BY r.created_at DESC, r.id DESC LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}`, f.params);
   return {
     ...t,
     plays: p.plays, plays24h: p.plays24h, players: p.players, avgCorrect: p.avg_correct, highScores: p.high,
     distribution,
+    daily,
+    sources,
+    retentionMonths: config.RETENTION_MONTHS,
     questions: await questionStats(pool),
     matched, page, pageSize: PAGE_SIZE, pages: Math.max(1, Math.ceil(matched / PAGE_SIZE)),
     recent: rows.map((r) => ({
       name: r.name, email: r.email, phone: r.phone, marketing: r.marketing_consent, createdAt: r.created_at,
       plays: r.plays, best: r.best, avg: r.avg, lastPlay: r.last_play, vouchers: r.vouchers, redeemed: r.redeemed,
+      source: r.source, optoutUrl: r.marketing_consent ? optoutUrl(r.optout_token) : null,
     })),
   };
 }
@@ -138,14 +156,16 @@ export async function registrationsCsv(pool, operator) {
   const { rows } = await pool.query(
     `${PER_REG_SQL}
      SELECT r.name, r.email, r.phone, r.marketing_consent, r.marketing_consent_at, r.privacy_version,
-            r.privacy_accepted_at, r.created_at, ${PER_REG_COLS}
+            r.privacy_accepted_at, r.created_at, r.source, r.optout_token, ${PER_REG_COLS}
      FROM registrations r ${PER_REG_JOIN} ORDER BY r.created_at`);
   await audit(pool, 'registration.exported', { operatorId: operator.id, details: { rows: rows.length } });
   const head = ['nome', 'email', 'whatsapp', 'aceita_promocoes', 'promocoes_aceitas_em', 'versao_politica', 'politica_aceita_em', 'cadastrado_em',
-    'partidas', 'melhor_acerto_de_8', 'media_acertos', 'ultima_partida', 'brindes_emitidos', 'brindes_entregues'];
+    'partidas', 'melhor_acerto_de_8', 'media_acertos', 'ultima_partida', 'brindes_emitidos', 'brindes_entregues',
+    'origem', 'link_para_parar_de_receber'];
   const lines = rows.map((r) => [r.name, r.email, `+${r.phone}`, r.marketing_consent ? 'sim' : 'nao',
     r.marketing_consent_at?.toISOString() ?? '', r.privacy_version, r.privacy_accepted_at.toISOString(), r.created_at.toISOString(),
-    r.plays, r.best ?? '', r.avg ?? '', r.last_play?.toISOString() ?? '', r.vouchers, r.redeemed].map(cell).join(','));
+    r.plays, r.best ?? '', r.avg ?? '', r.last_play?.toISOString() ?? '', r.vouchers, r.redeemed,
+    r.source ?? '', r.marketing_consent ? optoutUrl(r.optout_token) : ''].map(cell).join(','));
   return '﻿' + [head.join(','), ...lines].join('\r\n') + '\r\n';
 }
 
@@ -159,4 +179,35 @@ export async function deleteRegistration(pool, operator, email) {
     await audit(c, 'registration.deleted', { operatorId: operator.id, details: { registrationId: rows[0].id } });
     return { deleted: true };
   });
+}
+
+// ---------- descadastro de promoções (link pessoal) ----------
+export const optoutUrl = (token) => `${config.PUBLIC_BASE_URL}/sair/#t=${token}`;
+
+/** Retira a autorização de promoções. Idempotente; não revela de quem é o cadastro. */
+export async function optOut(pool, token) {
+  if (typeof token !== 'string' || !/^[0-9a-f]{32}$/.test(token)) throw err('OPTOUT_INVALID');
+  return tx(pool, async (c) => {
+    const { rows: [r] } = await c.query('SELECT id, marketing_consent FROM registrations WHERE optout_token=$1 FOR UPDATE', [token]);
+    if (!r) throw err('OPTOUT_INVALID');
+    if (r.marketing_consent) {
+      await c.query(`UPDATE registrations SET marketing_consent=false, marketing_consent_at=NULL, updated_at=now() WHERE id=$1`, [r.id]);
+      await audit(c, 'registration.optout', { details: { registrationId: r.id } });
+    }
+    return { optedOut: true };
+  });
+}
+
+// ---------- retenção ----------
+/** Apaga cadastros sem atividade há RETENTION_MONTHS meses (partidas sem brinde vão junto; com brinde ficam sem vínculo). */
+export async function purgeInactive(pool, months = config.RETENTION_MONTHS) {
+  const { rows } = await pool.query(
+    `DELETE FROM registrations WHERE last_activity_at < now() - make_interval(months => $1) RETURNING id`, [months]);
+  if (rows.length) await audit(pool, 'registration.purged', { details: { count: rows.length, months } });
+  return rows.length;
+}
+
+/** Marca atividade (jogar conta como atividade para a retenção). */
+export function touchRegistration(db, id) {
+  return db.query('UPDATE registrations SET last_activity_at = now() WHERE id=$1', [id]);
 }

@@ -31,6 +31,7 @@ export async function recordFreePlay(pool, registrationId, body) {
   const { rows: [{ n }] } = await pool.query(
     `SELECT count(*)::int n FROM free_plays WHERE registration_id=$1 AND completed_at > now() - interval '1 day'`, [registrationId]);
   if (n >= DAILY_LIMIT) throw err('PLAY_LIMIT');
+  await pool.query('UPDATE registrations SET last_activity_at = now() WHERE id=$1', [registrationId]);
   await pool.query(
     `INSERT INTO free_plays (registration_id, client_play_id, content_version, answers, correct)
      VALUES ($1,$2,$3,$4,$5) ON CONFLICT (registration_id, client_play_id) DO NOTHING`,
