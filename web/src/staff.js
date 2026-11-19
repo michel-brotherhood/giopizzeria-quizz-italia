@@ -11,6 +11,8 @@ let redeemKey = null;
 
 const STATE_PT = { issued: 'Disponível para entrega', redeemed: 'Já entregue', expired: 'Expirado', cancelled: 'Cancelado' };
 const CAMP_PT = { disabled: 'Desativada', active: 'Ativa', paused: 'Pausada', closed: 'Encerrada' };
+const INV_PT = { created: 'Aguardando', exchanged: 'Usado', expired: 'Expirado', cancelled: 'Cancelado' };
+const SESS_PT = { active: 'Jogando', completed: 'Concluída', expired: 'Expirada', cancelled: 'Cancelada' };
 
 function el(tag, attrs = {}, ...children) {
   const n = document.createElement(tag);
@@ -94,7 +96,9 @@ function selectTab(name) {
   if (name === 'manage') loadCampaigns();
   if (name === 'regs') loadRegistrations();
 }
-for (const t of ['invite', 'check', 'manage', 'regs']) $(`tab-${t}`).addEventListener('click', () => selectTab(t));
+for (const t of ['invite', 'check', 'manage', 'regs']) {
+  $(`tab-${t}`).addEventListener('click', () => { selectTab(t); window.scrollTo({ top: 0 }); });
+}
 
 // ---------- cadastros (gerente) ----------
 const fmtDT = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -117,41 +121,50 @@ function renderRegStats(r) {
   ];
   const dmax = Math.max(1, ...r.daily.map((d) => d.n));
   const dayLabel = (d) => `${d.day.slice(8, 10)}/${d.day.slice(5, 7)}`;
-  kids.push(el('h3', { class: 'sub' }, 'Cadastros por dia (últimos 30 dias)'),
-    el('div', { class: 'daily', role: 'img', 'aria-label': r.daily.filter((d) => d.n).map((d) => `${dayLabel(d)}: ${d.n}`).join('; ') || 'Nenhum cadastro no período' },
-      ...r.daily.map((d) => el('div', { title: `${dayLabel(d)}: ${d.n}` },
-        el('i', { style: `height:${Math.round((d.n / dmax) * 100)}%` })))),
-    el('div', { class: 'daily-labels', 'aria-hidden': 'true' },
-      el('span', {}, dayLabel(r.daily[0])), el('span', {}, dayLabel(r.daily[r.daily.length - 1]))));
-  if (r.sources.length) {
-    const base = `${location.origin}/?origem=`;
-    kids.push(el('h3', { class: 'sub' }, 'De onde vêm os cadastros'),
-      el('div', { class: 'table-wrap' }, el('table', {},
-        el('thead', {}, el('tr', {}, el('th', {}, 'Origem'), el('th', { class: 'num' }, 'Cadastros'), el('th', { class: 'num' }, 'Aceitam promoções'))),
-        el('tbody', {}, ...r.sources.map((x) => el('tr', {},
-          el('td', {}, x.source || 'sem origem (link direto)'), el('td', { class: 'num' }, String(x.n)), el('td', { class: 'num' }, String(x.marketing))))))),
-      el('p', { class: 'help' }, 'Para saber de onde vem cada pessoa, divulgue o quiz com links diferentes por canal, por exemplo ',
-        el('span', { class: 'mono' }, `${base}mesa`), ', ', el('span', { class: 'mono' }, `${base}instagram`), ' ou ',
-        el('span', { class: 'mono' }, `${base}whatsapp`), '. Use letras minúsculas, números e hífen (até 24).'));
-  }
+  const charts = [el('div', {},
+    el('h3', { class: 'sub' }, 'Cadastros por dia (últimos 30 dias)'),
+    el('div', { class: 'chart' },
+      el('div', { class: 'daily', role: 'img', 'aria-label': r.daily.filter((d) => d.n).map((d) => `${dayLabel(d)}: ${d.n}`).join('; ') || 'Nenhum cadastro no período' },
+        ...r.daily.map((d) => el('div', { title: `${dayLabel(d)}: ${d.n}` },
+          el('i', { class: d.n ? '' : 'zero', style: `height:${d.n ? Math.max(4, Math.round((d.n / dmax) * 100)) : 2}%` })))),
+      el('div', { class: 'daily-labels', 'aria-hidden': 'true' },
+        el('span', {}, dayLabel(r.daily[0])), el('span', {}, `hoje · ${r.daily[r.daily.length - 1].n}`))))];
   if (r.plays > 0) {
-    kids.push(el('h3', { class: 'sub' }, 'Acertos por partida'),
-      el('div', { class: 'dist', role: 'img', 'aria-label': r.distribution.map((n, i) => `${i} acertos: ${n}`).join('; ') },
-        ...r.distribution.map((n, i) => el('div', {}, el('span', {}, String(n)),
-          el('i', { class: i >= 7 ? 'hi' : '', style: `height:${Math.round((n / max) * 100)}%` })))),
-      el('div', { class: 'dist-labels', 'aria-hidden': 'true' }, ...r.distribution.map((_, i) => el('span', {}, String(i)))),
-      el('p', { class: 'help' }, 'Número de acertos (de 8). Em verde, as partidas que bateriam uma meta de 7 acertos.'));
+    charts.push(el('div', {},
+      el('h3', { class: 'sub' }, 'Acertos por partida'),
+      el('div', { class: 'chart' },
+        el('div', { class: 'dist', role: 'img', 'aria-label': r.distribution.map((n, i) => `${i} acertos: ${n}`).join('; ') },
+          ...r.distribution.map((n, i) => el('div', {}, el('span', {}, String(n)),
+            el('i', { class: i >= 7 ? 'hi' : '', style: `height:${Math.round((n / max) * 100)}%` })))),
+        el('div', { class: 'dist-labels', 'aria-hidden': 'true' }, ...r.distribution.map((_, i) => el('span', {}, String(i))))),
+      el('p', { class: 'help' }, 'Acertos de 0 a 8. Em verde, as partidas que bateriam uma meta de 7 acertos.')));
   }
+  kids.push(el('div', { class: 'split' }, ...charts));
+
+  const base = `${location.origin}/?origem=`;
+  const tables = [];
+  tables.push(el('div', {},
+    el('h3', { class: 'sub' }, 'De onde vêm os cadastros'),
+    r.sources.length ? el('div', { class: 'table-wrap' }, el('table', {},
+      el('thead', {}, el('tr', {}, el('th', {}, 'Origem'), el('th', { class: 'num' }, 'Cadastros'), el('th', { class: 'num' }, 'Aceitam promoções'))),
+      el('tbody', {}, ...r.sources.map((x) => el('tr', {},
+        el('td', { class: x.source ? '' : 'dim' }, x.source || 'link direto'), el('td', { class: 'num' }, String(x.n)), el('td', { class: 'num' }, String(x.marketing))))))) : null,
+    el('p', { class: 'help' }, 'Divulgue um link por canal para saber de onde vem cada pessoa:'),
+    el('ul', { class: 'links' }, ...['mesa', 'instagram', 'whatsapp'].map((o) => el('li', {},
+      el('span', { class: 'mono' }, `${base}${o}`),
+      el('button', { class: 's-btn small', type: 'button', onclick: (ev) => copyLink(ev.currentTarget, `${base}${o}`) }, 'Copiar'))))));
   if (r.questions.length) {
-    kids.push(el('h3', { class: 'sub' }, 'Perguntas que o público mais erra'),
+    tables.push(el('div', {},
+      el('h3', { class: 'sub' }, 'Perguntas que o público mais erra'),
       el('div', { class: 'table-wrap' }, el('table', {},
         el('thead', {}, el('tr', {}, el('th', {}, 'Pergunta'), el('th', { class: 'num' }, 'Acerto'), el('th', { class: 'num' }, 'Respostas'))),
         el('tbody', {}, ...r.questions.map((q) => el('tr', {},
           el('td', {}, q.question),
           el('td', { class: 'num' }, el('span', { class: `rate${q.rate < 0.4 ? ' low' : ''}` }, fmtPct(q.rate))),
           el('td', { class: 'num' }, String(q.answered))))))),
-      el('p', { class: 'help' }, 'Bom para ajustar o texto da pergunta ou virar assunto de conversa no salão.'));
+      el('p', { class: 'help' }, 'Bom para ajustar o texto da pergunta ou virar assunto de conversa no salão.')));
   }
+  kids.push(el('div', { class: 'split' }, ...tables));
   $('regs-stats').replaceChildren(...kids);
 }
 
@@ -166,30 +179,33 @@ function renderRegList(r) {
     el('div', { class: 'row' },
       el('button', { class: 's-btn', type: 'button', disabled: r.page <= 1, onclick: () => { regsQuery.page = r.page - 1; loadRegistrations(); } }, 'Anterior'),
       el('button', { class: 's-btn', type: 'button', disabled: r.page >= r.pages, onclick: () => { regsQuery.page = r.page + 1; loadRegistrations(); } }, 'Próxima')));
-  body.replaceChildren(pager(), el('div', { class: 'table-wrap' }, el('table', {},
+  const td = (label, content, cls) => el('td', { 'data-label': label, class: cls }, content);
+  body.replaceChildren(pager(), el('div', { class: 'table-wrap' }, el('table', { class: 'cards' },
     el('thead', {}, el('tr', {},
       el('th', {}, 'Nome'), el('th', {}, 'WhatsApp'), el('th', {}, 'E-mail'), el('th', {}, 'Promoções'),
       el('th', { class: 'num' }, 'Partidas'), el('th', { class: 'num' }, 'Melhor'), el('th', { class: 'num' }, 'Brindes'),
-      el('th', {}, 'Última partida'), el('th', {}, 'Cadastro'), el('th', {}, 'Origem'), el('th', {}, 'Link “parar de receber”'))),
+      el('th', {}, 'Última partida'), el('th', {}, 'Cadastro'), el('th', {}, 'Origem'), el('th', {}, 'Parar de receber'))),
     el('tbody', {}, ...r.recent.map((x) => el('tr', {},
-      el('td', {}, x.name),
-      el('td', { class: 'nowrap' }, el('a', { href: `https://wa.me/${x.phone}`, target: '_blank', rel: 'noopener noreferrer' }, fmtPhone(x.phone))),
-      el('td', {}, x.email),
-      el('td', {}, x.marketing ? 'sim' : 'não'),
-      el('td', { class: 'num' }, String(x.plays)),
-      el('td', { class: 'num' }, x.best == null ? '—' : `${x.best}/8`),
-      el('td', { class: 'num' }, x.vouchers ? `${x.redeemed}/${x.vouchers} entregue${x.redeemed === 1 ? '' : 's'}` : '—'),
-      el('td', { class: 'nowrap' }, x.lastPlay ? fmtDT.format(new Date(x.lastPlay)) : '—'),
-      el('td', { class: 'nowrap' }, fmtDT.format(new Date(x.createdAt))),
-      el('td', {}, x.source ?? '—'),
-      el('td', {}, x.optoutUrl ? el('button', { class: 's-btn small', type: 'button', onclick: (ev) => copyLink(ev.currentTarget, x.optoutUrl) }, 'Copiar link') : '—'))))),
+      td('Nome', x.name, 'name'),
+      td('WhatsApp', el('a', { href: `https://wa.me/${x.phone}`, target: '_blank', rel: 'noopener noreferrer' }, fmtPhone(x.phone)), 'nowrap'),
+      td('E-mail', x.email),
+      td('Promoções', x.marketing ? el('span', { class: 'tag yes' }, 'aceita') : el('span', { class: 'tag' }, 'não')),
+      td('Partidas', String(x.plays), 'num'),
+      td('Melhor', x.best == null ? '—' : `${x.best}/8`, 'num'),
+      td('Brindes', x.vouchers ? `${x.redeemed}/${x.vouchers} entregue${x.redeemed === 1 ? '' : 's'}` : '—', 'num'),
+      td('Última partida', x.lastPlay ? fmtDT.format(new Date(x.lastPlay)) : '—', 'nowrap'),
+      td('Cadastro', fmtDT.format(new Date(x.createdAt)), 'nowrap'),
+      td('Origem', x.source ?? '—', x.source ? '' : 'dim'),
+      td('Parar de receber', x.optoutUrl ? el('button', { class: 's-btn small', type: 'button', onclick: (ev) => copyLink(ev.currentTarget, x.optoutUrl) }, 'Copiar link') : '—'))))),
   ), ...(r.pages > 1 ? [pager()] : []));
 }
 
 async function copyLink(btn, url) {
   try {
     await navigator.clipboard.writeText(url);
+    const old = btn.textContent;
     btn.textContent = 'Copiado';
+    setTimeout(() => { btn.textContent = old; }, 1800);
   } catch {
     window.prompt('Copie o link:', url);
   }
@@ -236,23 +252,25 @@ async function refreshOverview() {
     const c = r.campaign;
     const body = $('campaign-body');
     if (!c) {
-      body.replaceChildren(el('p', {}, 'Nenhuma campanha ativa. O jogo funciona sem brinde.'));
+      body.replaceChildren(el('p', { class: 'empty' }, 'Nenhuma campanha ativa: o quiz funciona sem brinde.'));
       return;
     }
     body.replaceChildren(...[
-      el('p', { class: 'c-name' }, c.isTest ? el('span', { class: 'tag test' }, 'TESTE · sem valor') : null, ' ', c.name, ' ', el('span', { class: `tag st-${c.state}` }, CAMP_PT[c.state])),
-      el('p', {}, el('strong', {}, 'Brinde: '), c.rewardName ?? '—', c.quantityPerVoucher ? ` (×${c.quantityPerVoucher})` : ''),
-      el('p', {}, el('strong', {}, 'Regra: '), ruleLabel(c)),
+      el('div', { class: 'c-head' },
+        el('span', { class: 'c-name' }, c.name),
+        el('span', { class: `tag st-${c.state}` }, CAMP_PT[c.state]),
+        c.isTest ? el('span', { class: 'tag test' }, 'Teste · sem valor') : null),
+      el('p', { class: 'c-meta' }, `Brinde: ${c.rewardName ?? '—'}${c.quantityPerVoucher > 1 ? ` (×${c.quantityPerVoucher})` : ''} · Regra: ${ruleLabel(c)}`),
       el('dl', { class: 'counters' },
-        el('div', {}, el('dt', {}, 'Disponível'), el('dd', {}, String(c.available))),
-        el('div', {}, el('dt', {}, 'Reservado (em jogo)'), el('dd', {}, String(c.reservedCount))),
-        el('div', {}, el('dt', {}, 'Emitidos'), el('dd', {}, String(c.awardedCount))),
-        el('div', {}, el('dt', {}, 'Entregues'), el('dd', {}, String(c.redeemedCount))),
-        el('div', {}, el('dt', {}, 'Estoque total'), el('dd', {}, String(c.totalStock)))),
-      el('p', { class: 'help' }, `Período: ${fmtT(c.startsAt)} – ${fmtT(c.endsAt)}. Convite ${c.invitationTtlMinutes} min · partida ${c.sessionTtlMinutes} min · voucher ${c.rewardTtlMinutes} min.`),
+        counter('Disponível', c.available), counter('Em jogo', c.reservedCount),
+        counter('Emitidos', c.awardedCount), counter('Entregues', c.redeemedCount), counter('Estoque total', c.totalStock)),
+      el('p', { class: 'help' }, `Período: ${fmtT(c.startsAt)} a ${fmtT(c.endsAt)}. Convite vale ${c.invitationTtlMinutes} min, partida ${c.sessionTtlMinutes} min e brinde ${c.rewardTtlMinutes} min.`),
       r.invitations.length ? el('details', {}, el('summary', {}, 'Últimos convites'),
-        el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Conta'), el('th', {}, 'Criado'), el('th', {}, 'Convite'), el('th', {}, 'Partida'), el('th', {}, 'Brinde'))),
-          el('tbody', {}, r.invitations.map((i) => el('tr', {}, el('td', {}, i.accountRefHint), el('td', {}, fmtT(i.createdAt)), el('td', {}, i.state), el('td', {}, i.sessionState ?? '—'), el('td', {}, i.voucherState ?? '—')))))) : null,
+        el('div', { class: 'table-wrap' }, el('table', {},
+          el('thead', {}, el('tr', {}, el('th', {}, 'Conta'), el('th', {}, 'Criado'), el('th', {}, 'Convite'), el('th', {}, 'Partida'), el('th', {}, 'Brinde'))),
+          el('tbody', {}, r.invitations.map((i) => el('tr', {},
+            el('td', {}, i.accountRefHint), el('td', { class: 'nowrap' }, fmtT(i.createdAt)), el('td', {}, INV_PT[i.state] ?? i.state),
+            el('td', {}, SESS_PT[i.sessionState] ?? '—'), el('td', {}, STATE_PT[i.voucherState] ?? '—'))))))) : null,
     ].filter(Boolean));
   } catch (e) {
     if (e.code === 'UNAUTHENTICATED') return showLogin();
@@ -296,10 +314,12 @@ function voucherBox(v) {
   if (v.isTest) box.append(el('p', { class: 'tag test big' }, 'TESTE — SEM VALOR DE RESGATE'));
   box.append(
     el('p', { class: 'v-state' }, STATE_PT[v.state] ?? v.state),
-    el('p', {}, el('strong', {}, 'Brinde: '), `${v.quantity > 1 ? `${v.quantity} × ` : ''}${v.rewardName}`),
-    el('p', {}, el('strong', {}, 'Conta: '), v.accountRefHint),
-    el('p', {}, el('strong', {}, 'Emitido: '), fmtT(v.issuedAt), ' · ', el('strong', {}, 'Válido até: '), fmtT(v.expiresAt)));
-  if (v.state === 'redeemed') box.append(el('p', {}, el('strong', {}, 'Entregue em: '), fmtT(v.redeemedAt), v.redeemedBy ? ` por ${v.redeemedBy}` : ''));
+    el('dl', { class: 'kv' },
+      el('dt', {}, 'Brinde'), el('dd', {}, `${v.quantity > 1 ? `${v.quantity} × ` : ''}${v.rewardName}`),
+      el('dt', {}, 'Conta'), el('dd', {}, v.accountRefHint),
+      el('dt', {}, 'Emitido'), el('dd', {}, fmtT(v.issuedAt)),
+      el('dt', {}, 'Válido até'), el('dd', {}, fmtT(v.expiresAt)),
+      v.state === 'redeemed' ? [el('dt', {}, 'Entregue em'), el('dd', {}, fmtT(v.redeemedAt), v.redeemedBy ? ` por ${v.redeemedBy}` : '')] : null));
   if (v.state === 'issued') {
     box.append(el('button', { type: 'button', class: 's-btn primary', onclick: () => openConfirm(v) }, 'Confirmar entrega…'));
   }
@@ -400,8 +420,8 @@ async function loadCampaigns() {
   try {
     const r = await call('/api/staff/campaigns');
     list.replaceChildren(...r.campaigns.map((c) => el('div', { class: 'camp' },
-      el('p', {}, c.isTest ? el('span', { class: 'tag test' }, 'TESTE') : null, ' ', el('strong', {}, c.name), ' ', el('span', { class: `tag st-${c.state}` }, CAMP_PT[c.state])),
-      el('p', { class: 'help' }, `Brinde: ${c.rewardName ?? '—'} · estoque ${c.totalStock} · disponível ${c.available} · emitidos ${c.awardedCount} · entregues ${c.redeemedCount}`),
+      el('div', { class: 'c-head' }, el('strong', {}, c.name), el('span', { class: `tag st-${c.state}` }, CAMP_PT[c.state]), c.isTest ? el('span', { class: 'tag test' }, 'Teste') : null),
+      el('p', { class: 'help' }, `Brinde: ${c.rewardName ?? '—'}. Estoque ${c.totalStock}, disponível ${c.available}, emitidos ${c.awardedCount}, entregues ${c.redeemedCount}.`),
       el('p', { class: 'help' }, `Regra: ${ruleLabel(c)}`),
       c.missing.length && c.state !== 'closed' ? el('p', { class: 'help' }, `Falta para ativar: ${c.missing.join(', ')}`) : null,
       el('div', { class: 'row' },

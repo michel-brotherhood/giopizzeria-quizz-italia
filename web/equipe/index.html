@@ -5,123 +5,161 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0e1d">
   <title>Equipe · Da massa ao forno · Gio</title>
   <link rel="icon" type="image/svg+xml" href="/brand/gio-logo-una-tinta-a.svg">
   <link rel="stylesheet" href="/src/styles/staff.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-invite" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M3 7h18v10H3z"/><path d="M8 12l2.5 2.5L16 9"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M18 14.8c1.9.6 3.2 2.3 3.6 5.2"/></symbol>
+  </svg>
+
   <header class="s-top">
-    <img src="/brand/gio-logo-tres-tintas-a.svg" alt="Gio Pizzeria" width="28" height="40">
-    <div><strong>Painel da equipe</strong><span id="who"></span></div>
+    <a class="s-brand" href="/equipe/">
+      <img src="/brand/gio-logo-tres-tintas-c.webp" alt="" width="159" height="240">
+      <span><strong>Painel da equipe</strong><small>Da massa ao forno</small></span>
+    </a>
     <span class="env" id="env" hidden></span>
+    <span class="who" id="who"></span>
     <button type="button" class="s-ghost" id="logout" hidden>Sair</button>
   </header>
 
   <main id="main" tabindex="-1">
-    <section id="login-view" class="card" hidden aria-labelledby="l-title">
-      <h1 id="l-title">Entrar</h1>
+    <section id="login-view" class="login" hidden aria-labelledby="l-title">
+      <img src="/brand/gio-logo-tres-tintas-c.webp" alt="Gio Pizzeria Napoletana" width="80" height="121">
+      <h1 id="l-title">Entrar no painel</h1>
+      <p class="help">Acesso individual da equipe da Gio.</p>
       <form id="login-form" autocomplete="on">
         <label>Usuário <input name="username" autocomplete="username" required autocapitalize="none" spellcheck="false"></label>
         <label>Senha <input name="password" type="password" autocomplete="current-password" required></label>
-        <button class="s-btn primary" type="submit">Entrar</button>
+        <button class="s-btn primary block" type="submit">Entrar</button>
         <p class="msg" id="login-msg" role="alert"></p>
       </form>
     </section>
 
-    <div id="app-view" hidden>
-      <section class="card status" id="campaign-card" aria-labelledby="c-title">
-        <h2 id="c-title">Campanha</h2>
-        <div id="campaign-body"><p>Carregando…</p></div>
-      </section>
-
-      <nav class="tabs" role="tablist" aria-label="Ações">
-        <button role="tab" id="tab-invite" aria-controls="panel-invite" aria-selected="true">Convite</button>
-        <button role="tab" id="tab-check" aria-controls="panel-check" aria-selected="false">Conferir brinde</button>
-        <button role="tab" id="tab-manage" aria-controls="panel-manage" aria-selected="false" hidden>Gerenciar</button>
-        <button role="tab" id="tab-regs" aria-controls="panel-regs" aria-selected="false" hidden>Cadastros</button>
+    <div id="app-view" class="layout" hidden>
+      <nav class="tabs" role="tablist" aria-label="Seções do painel">
+        <button role="tab" id="tab-invite" aria-controls="panel-invite" aria-selected="true"><svg aria-hidden="true"><use href="#i-invite"/></svg><span>Convite</span></button>
+        <button role="tab" id="tab-check" aria-controls="panel-check" aria-selected="false"><svg aria-hidden="true"><use href="#i-check"/></svg><span>Conferir brinde</span></button>
+        <button role="tab" id="tab-manage" aria-controls="panel-manage" aria-selected="false" hidden><svg aria-hidden="true"><use href="#i-flag"/></svg><span>Campanhas</span></button>
+        <button role="tab" id="tab-regs" aria-controls="panel-regs" aria-selected="false" hidden><svg aria-hidden="true"><use href="#i-people"/></svg><span>Cadastros</span></button>
       </nav>
 
-      <section class="card" role="tabpanel" id="panel-invite" aria-labelledby="tab-invite">
-        <h2>Liberar convite para uma conta</h2>
-        <p class="help">Um convite por conta/comanda. Use só o número/código da comanda — sem nome, CPF ou telefone.</p>
-        <form id="invite-form">
-          <label>Referência da conta <input name="accountRef" maxlength="40" required inputmode="text" autocomplete="off" placeholder="ex.: 0423 ou MESA 12"></label>
-          <button class="s-btn primary" type="submit">Gerar convite</button>
-        </form>
-        <div id="invite-out" aria-live="polite"></div>
-      </section>
+      <div class="content">
+        <section class="status" id="campaign-card" aria-labelledby="c-title">
+          <h2 id="c-title" class="sr-only">Campanha atual</h2>
+          <div id="campaign-body"><p class="help">Carregando…</p></div>
+        </section>
 
-      <section class="card" role="tabpanel" id="panel-check" aria-labelledby="tab-check" hidden>
-        <h2>Conferir brinde</h2>
-        <p class="help">Consultar não entrega. A entrega só acontece no botão “Confirmar entrega”. Não aceite screenshot como única prova.</p>
-        <form id="check-form">
-          <label>Código do brinde <input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX"></label>
-          <div class="row">
-            <button class="s-btn primary" type="submit">Consultar</button>
-            <button class="s-btn" type="button" id="scan-btn">Ler QR com a câmera</button>
+        <section class="card narrow" role="tabpanel" id="panel-invite" aria-labelledby="tab-invite">
+          <h2>Liberar convite para uma conta</h2>
+          <p class="help">Um convite por conta ou comanda. Use só o número da comanda, sem nome, CPF ou telefone.</p>
+          <form id="invite-form" class="inline-form">
+            <label>Referência da conta <input name="accountRef" maxlength="40" required inputmode="text" autocomplete="off" placeholder="ex.: 0423 ou MESA 12"></label>
+            <button class="s-btn primary" type="submit">Gerar convite</button>
+          </form>
+          <div id="invite-out" aria-live="polite"></div>
+        </section>
+
+        <section class="card narrow" role="tabpanel" id="panel-check" aria-labelledby="tab-check" hidden>
+          <h2>Conferir brinde</h2>
+          <p class="help">Consultar não entrega. A entrega só acontece em “Confirmar entrega”. Não aceite captura de tela como única prova.</p>
+          <form id="check-form">
+            <label>Código do brinde <input name="code" class="code-input" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX"></label>
+            <div class="row">
+              <button class="s-btn primary" type="submit">Consultar</button>
+              <button class="s-btn" type="button" id="scan-btn">Ler QR com a câmera</button>
+            </div>
+          </form>
+          <div id="scanner" hidden>
+            <video id="scan-video" playsinline muted></video>
+            <button class="s-btn" type="button" id="scan-stop">Fechar câmera</button>
           </div>
-        </form>
-        <div id="scanner" hidden>
-          <video id="scan-video" playsinline muted></video>
-          <button class="s-btn" type="button" id="scan-stop">Fechar câmera</button>
-        </div>
-        <div id="check-out" aria-live="polite"></div>
-      </section>
+          <div id="check-out" aria-live="polite"></div>
+        </section>
 
-      <section class="card" role="tabpanel" id="panel-regs" aria-labelledby="tab-regs" hidden>
-        <h2>Cadastros de clientes</h2>
-        <p class="help">Dados pessoais: use só para as finalidades da Política de Privacidade. Envie promoções apenas para quem autorizou (coluna “aceita_promocoes = sim”) e inclua em cada mensagem o link pessoal “parar de receber” (coluna da planilha ou botão “Copiar link”). Cadastros sem atividade por 24 meses são apagados automaticamente. Não compartilhe a planilha.</p>
-        <div id="regs-stats" aria-live="polite"><p>Carregando…</p></div>
-        <h3 class="sub">Lista de cadastros</h3>
-        <form id="regs-search" class="regs-search" role="search">
-          <label>Buscar por nome, e-mail ou WhatsApp <input name="q" type="search" maxlength="80" autocomplete="off"></label>
-          <label class="check"><input name="marketing" type="checkbox"> Só quem aceita promoções</label>
-          <button class="s-btn" type="submit">Buscar</button>
-        </form>
-        <div id="regs-body"></div>
-        <div class="row"><a class="s-btn primary" id="regs-csv" href="/api/staff/registrations.csv" download>Baixar planilha (CSV)</a></div>
-        <details class="regs-del">
-          <summary>Excluir cadastro a pedido do cliente</summary>
-          <form id="regs-del-form">
-            <label>E-mail do cadastro <input name="email" type="email" autocomplete="off" required></label>
-            <button class="s-btn danger" type="submit">Excluir cadastro</button>
+        <section class="card" role="tabpanel" id="panel-regs" aria-labelledby="tab-regs" hidden>
+          <div class="card-head">
+            <h2>Cadastros de clientes</h2>
+            <a class="s-btn primary" id="regs-csv" href="/api/staff/registrations.csv" download>Baixar planilha (CSV)</a>
+          </div>
+          <details class="note">
+            <summary>Como usar estes dados</summary>
+            <ul>
+              <li>Use só para as finalidades da Política de Privacidade e não compartilhe a planilha.</li>
+              <li>Envie promoções apenas para quem aceitou e inclua em cada mensagem o link pessoal “parar de receber” (coluna da planilha ou botão “Copiar link”).</li>
+              <li>Cadastros sem atividade por 24 meses são apagados automaticamente.</li>
+            </ul>
+          </details>
+          <div id="regs-stats" aria-live="polite"><p class="help">Carregando…</p></div>
+
+          <h3 class="sub">Lista de cadastros</h3>
+          <form id="regs-search" class="regs-search" role="search">
+            <label>Buscar por nome, e-mail ou WhatsApp <input name="q" type="search" maxlength="80" autocomplete="off"></label>
+            <label class="check"><input name="marketing" type="checkbox"> Só quem aceita promoções</label>
+            <button class="s-btn" type="submit">Buscar</button>
+          </form>
+          <div id="regs-body"></div>
+
+          <details class="danger-zone">
+            <summary>Excluir cadastro a pedido do cliente</summary>
+            <form id="regs-del-form" class="inline-form">
+              <label>E-mail do cadastro <input name="email" type="email" autocomplete="off" required></label>
+              <button class="s-btn danger" type="submit">Excluir cadastro</button>
+            </form>
             <p class="msg" id="regs-del-msg" role="status"></p>
-          </form>
-        </details>
-      </section>
+          </details>
+        </section>
 
-      <section class="card" role="tabpanel" id="panel-manage" aria-labelledby="tab-manage" hidden>
-        <h2>Gerenciar campanhas</h2>
-        <p class="help">Campanhas nascem desativadas. A ativação exige brinde, quantidade, regras, período e estoque. Campanhas reais só ativam com autorização explícita no servidor (REAL_CAMPAIGNS_ENABLED).</p>
-        <div id="campaign-list"></div>
-        <details>
-          <summary>Nova campanha</summary>
-          <form id="campaign-form" class="grid">
-            <label>Nome interno <input name="name" required maxlength="120"></label>
-            <label>Nome do brinde (como o cliente verá) <input name="rewardName" maxlength="160"></label>
-            <label>Quantidade por voucher <input name="quantityPerVoucher" type="number" min="1" step="1"></label>
-            <label>Estoque total <input name="totalStock" type="number" min="0" step="1"></label>
-            <label>Início <input name="startsAt" type="datetime-local"></label>
-            <label>Fim <input name="endsAt" type="datetime-local"></label>
-            <label>Regra de premiação
-              <select name="awardRule">
-                <option value="participation">Quem concluir as 8 perguntas ganha</option>
-                <option value="min_score">Quem atingir a pontuação mínima ganha</option>
-                <option value="every_n">A cada N partidas com a pontuação mínima, uma ganha</option>
-              </select>
-            </label>
-            <label>Acertos mínimos (de 8) <input name="minCorrect" type="number" min="1" max="8" step="1" value="7"></label>
-            <label>N (a cada quantas qualificadas) <input name="everyN" type="number" min="1" max="10000" step="1" value="15"></label>
-            <label class="wide">Regras públicas <textarea name="rulesText" rows="3" maxlength="2000"></textarea></label>
-            <label>Validade do convite (min) <input name="invitationTtlMinutes" type="number" min="1" value="30"></label>
-            <label>Tempo de partida com reserva (min) <input name="sessionTtlMinutes" type="number" min="1" value="20"></label>
-            <label>Validade do voucher (min) <input name="rewardTtlMinutes" type="number" min="1" value="60"></label>
-            <label class="check" id="is-test-wrap"><input name="isTest" type="checkbox"> Campanha de teste (sem valor de resgate)</label>
-            <button class="s-btn primary" type="submit">Criar (desativada)</button>
-            <p class="msg" id="campaign-msg" role="alert"></p>
-          </form>
-        </details>
-      </section>
+        <section class="card" role="tabpanel" id="panel-manage" aria-labelledby="tab-manage" hidden>
+          <h2>Campanhas</h2>
+          <p class="help">Campanhas nascem desativadas. Para ativar é preciso brinde, quantidade, regras, período e estoque. Campanhas reais só ativam com autorização no servidor (REAL_CAMPAIGNS_ENABLED).</p>
+          <div id="campaign-list"></div>
+          <details class="new-camp">
+            <summary>Nova campanha</summary>
+            <form id="campaign-form" class="grid">
+              <fieldset>
+                <legend>Brinde</legend>
+                <label>Nome interno <input name="name" required maxlength="120"></label>
+                <label>Nome do brinde (como o cliente verá) <input name="rewardName" maxlength="160"></label>
+                <label>Quantidade por voucher <input name="quantityPerVoucher" type="number" min="1" step="1"></label>
+                <label>Estoque total <input name="totalStock" type="number" min="0" step="1"></label>
+              </fieldset>
+              <fieldset>
+                <legend>Regra e período</legend>
+                <label class="wide">Regra de premiação
+                  <select name="awardRule">
+                    <option value="participation">Quem concluir as 8 perguntas ganha</option>
+                    <option value="min_score">Quem atingir a pontuação mínima ganha</option>
+                    <option value="every_n">A cada N partidas com a pontuação mínima, uma ganha</option>
+                  </select>
+                </label>
+                <label>Acertos mínimos (de 8) <input name="minCorrect" type="number" min="1" max="8" step="1" value="7"></label>
+                <label>N (a cada quantas qualificadas) <input name="everyN" type="number" min="1" max="10000" step="1" value="15"></label>
+                <label>Início <input name="startsAt" type="datetime-local"></label>
+                <label>Fim <input name="endsAt" type="datetime-local"></label>
+                <label class="wide">Regras públicas <textarea name="rulesText" rows="3" maxlength="2000"></textarea></label>
+              </fieldset>
+              <fieldset>
+                <legend>Prazos</legend>
+                <label>Validade do convite (min) <input name="invitationTtlMinutes" type="number" min="1" value="30"></label>
+                <label>Tempo de partida com reserva (min) <input name="sessionTtlMinutes" type="number" min="1" value="20"></label>
+                <label>Validade do voucher (min) <input name="rewardTtlMinutes" type="number" min="1" value="60"></label>
+                <label class="check wide" id="is-test-wrap"><input name="isTest" type="checkbox"> Campanha de teste (sem valor de resgate)</label>
+              </fieldset>
+              <div class="form-end">
+                <button class="s-btn primary" type="submit">Criar (desativada)</button>
+                <p class="msg" id="campaign-msg" role="alert"></p>
+              </div>
+            </form>
+          </details>
+        </section>
+
+      </div>
     </div>
   </main>
   <footer class="s-foot"><p>© 2026 Gio Pizzeria Napoletana, Niterói. Todos os direitos reservados.</p></footer>

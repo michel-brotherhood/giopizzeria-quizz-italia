@@ -153,6 +153,11 @@ Pedido do usuário: “a cada 15 partidas com 80% de acerto ou mais, ganha algo�
 - **Banco de perguntas 1.1.0**: 44 perguntas (pizza 24, cucina 12, dolci 8). As 12 novas usam fatos conferidos em 19/11/2026 nas páginas da AVPN (receita e decálogo: forno a lenha, 430–480 °C, 60–90 s, até 35 cm, massa só com farinha/água/sal/fermento, fermentação mínima de 8 h, mozzarella de búfala ou fior di latte, azeite em espiral) e do turismo de Gênova (pesto: pilão de madeira de oliveira, pinoli, parmigiano/grana e pecorino sardo, manjericão genovês DOP). Doces não foram ampliados: as fontes de tiramisù e café não abriram na verificação. O validador agora exige mínimo 16/8/8.
 - Testes: unitários 34/34, integração 54/54 (novo `optout-retention.test.js`), lint ok.
 
+## Painel da equipe redesenhado (19/11/2026)
+- Mesma direção visual do quiz (navy, creme, vermelho Gio, Outfit). Celular: barra de navegação fixa embaixo, faixa da campanha compacta, lista de cadastros em cartões. Computador: menu lateral e conteúdo até 1320 px.
+- Estados de convite, partida e brinde traduzidos; links por canal com botão "Copiar"; formulário de campanha em grupos (brinde, regra e período, prazos).
+- Sem rolagem horizontal em 390 e 1440 px; testes E2E do painel (8) passando.
+
 ## Limitações conhecidas
 - Se o cliente perder o código **e** a credencial ficar ilegível (troca de `SESSION_SECRET`), a equipe não tem busca por conta para entregar; definir procedimento antes da campanha real.
 - Limite real é por convite/conta, não por pessoa física; QR/print pode ser repassado (equipe confere conta e status).
