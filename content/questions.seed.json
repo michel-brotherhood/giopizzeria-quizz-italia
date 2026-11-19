@@ -1,0 +1,934 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "1.0.0",
+  "questions": [
+    {
+      "id": "pizza-001",
+      "category": "pizza",
+      "topicGroup": "napoli",
+      "difficulty": "facil",
+      "question": "Qual cidade italiana está especialmente ligada à tradição da pizza napolitana?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Milão"
+        },
+        {
+          "id": "c",
+          "text": "Turim"
+        },
+        {
+          "id": "d",
+          "text": "Bolonha"
+        },
+        {
+          "id": "a",
+          "text": "Nápoles"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A tradição napolitana está ligada a Nápoles, na Campânia.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-002",
+      "category": "pizza",
+      "topicGroup": "margherita",
+      "difficulty": "facil",
+      "question": "Qual combinação é clássica na pizza Margherita?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Frango, milho e catupiry"
+        },
+        {
+          "id": "d",
+          "text": "Atum, ervilha e maionese"
+        },
+        {
+          "id": "a",
+          "text": "Tomate, mozzarella e manjericão"
+        },
+        {
+          "id": "b",
+          "text": "Chocolate, banana e canela"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Esses ingredientes estão entre os elementos característicos da Margherita.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-003",
+      "category": "pizza",
+      "topicGroup": "margherita",
+      "difficulty": "intermediaria",
+      "question": "Qual erva fresca aparece na Margherita clássica?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Coentro"
+        },
+        {
+          "id": "a",
+          "text": "Manjericão"
+        },
+        {
+          "id": "b",
+          "text": "Hortelã"
+        },
+        {
+          "id": "c",
+          "text": "Alecrim"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O manjericão é parte da combinação clássica dessa pizza.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-004",
+      "category": "pizza",
+      "topicGroup": "marinara",
+      "difficulty": "facil",
+      "question": "A Marinara tradicional leva qual combinação?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tomate, alho, azeite e orégano"
+        },
+        {
+          "id": "b",
+          "text": "Creme de leite e presunto"
+        },
+        {
+          "id": "c",
+          "text": "Frutos do mar obrigatoriamente"
+        },
+        {
+          "id": "d",
+          "text": "Mozzarella, milho e ervilha"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Apesar do nome, essa pizza não exige frutos do mar.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-005",
+      "category": "pizza",
+      "topicGroup": "marinara",
+      "difficulty": "facil",
+      "question": "Qual ingrediente está presente na Marinara clássica?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Chocolate"
+        },
+        {
+          "id": "c",
+          "text": "Peito de peru"
+        },
+        {
+          "id": "d",
+          "text": "Leite condensado"
+        },
+        {
+          "id": "a",
+          "text": "Alho"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Alho, tomate, azeite e orégano compõem a combinação tradicional.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-006",
+      "category": "pizza",
+      "topicGroup": "cornicione",
+      "difficulty": "intermediaria",
+      "question": "Como se chama a borda elevada da pizza napolitana?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Risotto"
+        },
+        {
+          "id": "d",
+          "text": "Espresso"
+        },
+        {
+          "id": "a",
+          "text": "Cornicione"
+        },
+        {
+          "id": "b",
+          "text": "Raviolo"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Cornicione é o nome dado à borda elevada.",
+      "sourceId": "avpn-recipe",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-007",
+      "category": "pizza",
+      "topicGroup": "texture",
+      "difficulty": "facil",
+      "question": "Qual textura é associada à pizza napolitana tradicional?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Igual a uma torrada industrial"
+        },
+        {
+          "id": "a",
+          "text": "Macia e flexível"
+        },
+        {
+          "id": "b",
+          "text": "Rígida como um biscoito"
+        },
+        {
+          "id": "c",
+          "text": "Sempre seca e quebradiça"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A textura macia permite dobrar a pizza.",
+      "sourceId": "avpn",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-008",
+      "category": "pizza",
+      "topicGroup": "opening",
+      "difficulty": "facil",
+      "question": "Na tradição napolitana, como o disco de massa é aberto?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Com as mãos"
+        },
+        {
+          "id": "b",
+          "text": "Com máquina de sorvete"
+        },
+        {
+          "id": "c",
+          "text": "Com prensa de sanduíche"
+        },
+        {
+          "id": "d",
+          "text": "Com faca para picar"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A abertura manual faz parte da técnica tradicional.",
+      "sourceId": "styles",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-009",
+      "category": "pizza",
+      "topicGroup": "formaggi",
+      "difficulty": "intermediaria",
+      "question": "O nome quattro formaggi indica uma pizza de quê?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Quatro carnes"
+        },
+        {
+          "id": "c",
+          "text": "Quatro frutas"
+        },
+        {
+          "id": "d",
+          "text": "Quatro tipos de farinha"
+        },
+        {
+          "id": "a",
+          "text": "Quatro queijos"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Formaggi é a palavra italiana para queijos.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-010",
+      "category": "pizza",
+      "topicGroup": "diavola",
+      "difficulty": "facil",
+      "question": "A pizza Diavola costuma ser associada a qual característica?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Ausência obrigatória de cobertura"
+        },
+        {
+          "id": "d",
+          "text": "Calda de chocolate"
+        },
+        {
+          "id": "a",
+          "text": "Um toque picante"
+        },
+        {
+          "id": "b",
+          "text": "Somente frutas doces"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Versões clássicas usam salame picante.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-011",
+      "category": "pizza",
+      "topicGroup": "margherita",
+      "difficulty": "facil",
+      "question": "Na Margherita, qual ingrediente traz o vermelho à composição?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Farinha"
+        },
+        {
+          "id": "a",
+          "text": "Tomate"
+        },
+        {
+          "id": "b",
+          "text": "Manjericão"
+        },
+        {
+          "id": "c",
+          "text": "Mozzarella"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O tomate contrasta com o branco do queijo e o verde da erva.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-012",
+      "category": "pizza",
+      "topicGroup": "texture",
+      "difficulty": "intermediaria",
+      "question": "O que diferencia a pizza napolitana de uma pizza muito seca e crocante?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Massa que preserva maciez e umidade"
+        },
+        {
+          "id": "b",
+          "text": "Uso obrigatório de açúcar na cobertura"
+        },
+        {
+          "id": "c",
+          "text": "Ausência total de cozimento"
+        },
+        {
+          "id": "d",
+          "text": "Formato sempre quadrado"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A cocção rápida e quente contribui para sua textura.",
+      "sourceId": "styles",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-013",
+      "category": "pizza",
+      "topicGroup": "stagioni",
+      "difficulty": "facil",
+      "question": "Quattro stagioni é o nome italiano de qual pizza?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Quatro queijos"
+        },
+        {
+          "id": "c",
+          "text": "Quatro fornos"
+        },
+        {
+          "id": "d",
+          "text": "Quatro cidades"
+        },
+        {
+          "id": "a",
+          "text": "Quatro estações"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O nome designa uma combinação tradicional com diferentes coberturas.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-014",
+      "category": "pizza",
+      "topicGroup": "dough",
+      "difficulty": "facil",
+      "question": "Qual alimento é a base do disco que recebe a cobertura da pizza?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Uma folha de papel de arroz"
+        },
+        {
+          "id": "d",
+          "text": "Uma fatia de bolo"
+        },
+        {
+          "id": "a",
+          "text": "Massa feita com farinha"
+        },
+        {
+          "id": "b",
+          "text": "Uma placa de queijo puro"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A massa é preparada antes de receber os ingredientes de cobertura.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-015",
+      "category": "pizza",
+      "topicGroup": "cornicione",
+      "difficulty": "intermediaria",
+      "question": "Na pizza napolitana, onde fica o cornicione?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Dentro do forno como utensílio"
+        },
+        {
+          "id": "a",
+          "text": "Ao redor do disco"
+        },
+        {
+          "id": "b",
+          "text": "Somente no centro"
+        },
+        {
+          "id": "c",
+          "text": "Embaixo do prato"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A borda circunda a região central com cobertura.",
+      "sourceId": "avpn-recipe",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "pizza-016",
+      "category": "pizza",
+      "topicGroup": "margherita",
+      "difficulty": "facil",
+      "question": "O manjericão da pizza é um exemplo de quê?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Erva aromática"
+        },
+        {
+          "id": "b",
+          "text": "Tipo de queijo"
+        },
+        {
+          "id": "c",
+          "text": "Corte de carne"
+        },
+        {
+          "id": "d",
+          "text": "Tipo de farinha"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Seu aroma participa da combinação de sabores da pizza.",
+      "sourceId": "pizza",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-001",
+      "category": "cucina",
+      "topicGroup": "pesto",
+      "difficulty": "facil",
+      "question": "O pesto alla genovese é especialmente associado a qual erva?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Hortelã"
+        },
+        {
+          "id": "c",
+          "text": "Coentro"
+        },
+        {
+          "id": "d",
+          "text": "Erva-doce"
+        },
+        {
+          "id": "a",
+          "text": "Manjericão"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O manjericão é central nessa preparação de Gênova.",
+      "sourceId": "pesto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-002",
+      "category": "cucina",
+      "topicGroup": "pesto",
+      "difficulty": "facil",
+      "question": "Qual utensílio é tradicional no preparo do pesto genovese?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Espremedor de laranja"
+        },
+        {
+          "id": "d",
+          "text": "Peneira de café"
+        },
+        {
+          "id": "a",
+          "text": "Pilão com almofariz"
+        },
+        {
+          "id": "b",
+          "text": "Máquina de sorvete"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "A técnica tradicional envolve amassar os ingredientes no almofariz.",
+      "sourceId": "pesto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-003",
+      "category": "cucina",
+      "topicGroup": "pesto",
+      "difficulty": "intermediaria",
+      "question": "A tradição do pesto genovese está ligada a qual região?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Puglia"
+        },
+        {
+          "id": "a",
+          "text": "Ligúria"
+        },
+        {
+          "id": "b",
+          "text": "Sicília"
+        },
+        {
+          "id": "c",
+          "text": "Vêneto"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Gênova fica na Ligúria, região associada ao molho.",
+      "sourceId": "pesto-region",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-004",
+      "category": "cucina",
+      "topicGroup": "al-dente",
+      "difficulty": "facil",
+      "question": "O que significa uma massa estar al dente?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Cozida, mas com leve firmeza ao morder"
+        },
+        {
+          "id": "b",
+          "text": "Crua e seca no centro inteiro"
+        },
+        {
+          "id": "c",
+          "text": "Desmanchando completamente"
+        },
+        {
+          "id": "d",
+          "text": "Obrigatoriamente gelada"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Al dente descreve a textura, não um molho específico.",
+      "sourceId": "pasta",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-005",
+      "category": "cucina",
+      "topicGroup": "pasta-shape",
+      "difficulty": "facil",
+      "question": "Qual formato descreve melhor o spaghetti?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Pequenas conchas"
+        },
+        {
+          "id": "c",
+          "text": "Discos recheados"
+        },
+        {
+          "id": "d",
+          "text": "Cubos de massa"
+        },
+        {
+          "id": "a",
+          "text": "Fios longos"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Spaghetti é um dos formatos longos mais conhecidos.",
+      "sourceId": "spaghetti",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-006",
+      "category": "cucina",
+      "topicGroup": "pasta-shape",
+      "difficulty": "intermediaria",
+      "question": "Qual destes formatos de massa lembra uma espiral?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Lasanha"
+        },
+        {
+          "id": "d",
+          "text": "Cannelloni"
+        },
+        {
+          "id": "a",
+          "text": "Fusilli"
+        },
+        {
+          "id": "b",
+          "text": "Spaghetti"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O fusilli tem desenho helicoidal.",
+      "sourceId": "fusilli",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-007",
+      "category": "cucina",
+      "topicGroup": "rice",
+      "difficulty": "facil",
+      "question": "Qual ingrediente é a base de um risotto?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Batata frita"
+        },
+        {
+          "id": "a",
+          "text": "Arroz"
+        },
+        {
+          "id": "b",
+          "text": "Cuscuz de milho"
+        },
+        {
+          "id": "c",
+          "text": "Aveia em flocos"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O risotto é uma preparação de arroz.",
+      "sourceId": "risotto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "cucina-008",
+      "category": "cucina",
+      "topicGroup": "pesto",
+      "difficulty": "facil",
+      "question": "Qual destes ingredientes faz parte do pesto genovese tradicional?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pinoli"
+        },
+        {
+          "id": "b",
+          "text": "Banana"
+        },
+        {
+          "id": "c",
+          "text": "Chocolate branco"
+        },
+        {
+          "id": "d",
+          "text": "Farinha de mandioca"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Pinoli é um dos ingredientes da fórmula tradicional.",
+      "sourceId": "pesto",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-001",
+      "category": "dolci",
+      "topicGroup": "tiramisu",
+      "difficulty": "facil",
+      "question": "Qual queijo é clássico no creme do tiramisù?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Gorgonzola"
+        },
+        {
+          "id": "c",
+          "text": "Pecorino"
+        },
+        {
+          "id": "d",
+          "text": "Provolone"
+        },
+        {
+          "id": "a",
+          "text": "Mascarpone"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O mascarpone compõe o creme da sobremesa.",
+      "sourceId": "tiramisu",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-002",
+      "category": "dolci",
+      "topicGroup": "tiramisu",
+      "difficulty": "facil",
+      "question": "Qual bebida costuma umedecer os biscoitos do tiramisù?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Chá de hortelã"
+        },
+        {
+          "id": "d",
+          "text": "Água de coco"
+        },
+        {
+          "id": "a",
+          "text": "Café"
+        },
+        {
+          "id": "b",
+          "text": "Suco de laranja"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O café participa da montagem tradicional.",
+      "sourceId": "tiramisu",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-003",
+      "category": "dolci",
+      "topicGroup": "tiramisu",
+      "difficulty": "intermediaria",
+      "question": "Qual ingrediente costuma finalizar a superfície do tiramisù clássico?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Pimenta-do-reino"
+        },
+        {
+          "id": "a",
+          "text": "Cacau em pó"
+        },
+        {
+          "id": "b",
+          "text": "Sal grosso"
+        },
+        {
+          "id": "c",
+          "text": "Orégano"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O cacau contrasta com o creme e o café.",
+      "sourceId": "tiramisu",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-004",
+      "category": "dolci",
+      "topicGroup": "affogato",
+      "difficulty": "facil",
+      "question": "O affogato al caffè combina sorvete com qual bebida?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Café espresso"
+        },
+        {
+          "id": "b",
+          "text": "Suco de uva"
+        },
+        {
+          "id": "c",
+          "text": "Chá gelado"
+        },
+        {
+          "id": "d",
+          "text": "Água com gás"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O café é servido sobre o sorvete nessa combinação.",
+      "sourceId": "affogato",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-005",
+      "category": "dolci",
+      "topicGroup": "affogato",
+      "difficulty": "facil",
+      "question": "Qual sobremesa combina café com uma base gelada?",
+      "options": [
+        {
+          "id": "b",
+          "text": "Marinara"
+        },
+        {
+          "id": "c",
+          "text": "Risotto"
+        },
+        {
+          "id": "d",
+          "text": "Fusilli"
+        },
+        {
+          "id": "a",
+          "text": "Affogato"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O encontro de sorvete e café caracteriza o affogato al caffè.",
+      "sourceId": "affogato",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-006",
+      "category": "dolci",
+      "topicGroup": "coffee",
+      "difficulty": "intermediaria",
+      "question": "Qual destas bebidas de café é comum nos bares italianos?",
+      "options": [
+        {
+          "id": "c",
+          "text": "Molho de tomate"
+        },
+        {
+          "id": "d",
+          "text": "Água de arroz"
+        },
+        {
+          "id": "a",
+          "text": "Espresso"
+        },
+        {
+          "id": "b",
+          "text": "Caldo de legumes"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "O espresso faz parte dos hábitos de café na Itália.",
+      "sourceId": "coffee",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-007",
+      "category": "dolci",
+      "topicGroup": "breakfast",
+      "difficulty": "facil",
+      "question": "Qual bebida costuma aparecer no café da manhã italiano junto ao cornetto?",
+      "options": [
+        {
+          "id": "d",
+          "text": "Molho pesto"
+        },
+        {
+          "id": "a",
+          "text": "Cappuccino"
+        },
+        {
+          "id": "b",
+          "text": "Caldo de carne"
+        },
+        {
+          "id": "c",
+          "text": "Sopa de tomate"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Cappuccino com cornetto é uma combinação frequente no café da manhã.",
+      "sourceId": "coffee",
+      "reviewStatus": "proposta-editorial"
+    },
+    {
+      "id": "dolci-008",
+      "category": "dolci",
+      "topicGroup": "tiramisu",
+      "difficulty": "facil",
+      "question": "No contexto de um cardápio italiano, qual destes é uma sobremesa?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tiramisù"
+        },
+        {
+          "id": "b",
+          "text": "Marinara"
+        },
+        {
+          "id": "c",
+          "text": "Pesto"
+        },
+        {
+          "id": "d",
+          "text": "Risotto"
+        }
+      ],
+      "correctOptionId": "a",
+      "explanation": "Tiramisù pertence ao universo dos doces italianos.",
+      "sourceId": "tiramisu",
+      "reviewStatus": "proposta-editorial"
+    }
+  ]
+}

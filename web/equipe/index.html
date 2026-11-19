@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Equipe · Da massa ao forno · Gio</title>
+  <link rel="icon" type="image/svg+xml" href="/brand/gio-logo-una-tinta-a.svg">
+  <link rel="stylesheet" href="/src/styles/staff.css">
+</head>
+<body>
+  <header class="s-top">
+    <img src="/brand/gio-logo-tres-tintas-a.svg" alt="Gio Pizzeria" width="28" height="40">
+    <div><strong>Painel da equipe</strong><span id="who"></span></div>
+    <span class="env" id="env" hidden></span>
+    <button type="button" class="s-ghost" id="logout" hidden>Sair</button>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section id="login-view" class="card" hidden aria-labelledby="l-title">
+      <h1 id="l-title">Entrar</h1>
+      <form id="login-form" autocomplete="on">
+        <label>Usuário <input name="username" autocomplete="username" required autocapitalize="none" spellcheck="false"></label>
+        <label>Senha <input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="s-btn primary" type="submit">Entrar</button>
+        <p class="msg" id="login-msg" role="alert"></p>
+      </form>
+    </section>
+
+    <div id="app-view" hidden>
+      <section class="card status" id="campaign-card" aria-labelledby="c-title">
+        <h2 id="c-title">Campanha</h2>
+        <div id="campaign-body"><p>Carregando…</p></div>
+      </section>
+
+      <nav class="tabs" role="tablist" aria-label="Ações">
+        <button role="tab" id="tab-invite" aria-controls="panel-invite" aria-selected="true">Convite</button>
+        <button role="tab" id="tab-check" aria-controls="panel-check" aria-selected="false">Conferir brinde</button>
+        <button role="tab" id="tab-manage" aria-controls="panel-manage" aria-selected="false" hidden>Gerenciar</button>
+      </nav>
+
+      <section class="card" role="tabpanel" id="panel-invite" aria-labelledby="tab-invite">
+        <h2>Liberar convite para uma conta</h2>
+        <p class="help">Um convite por conta/comanda. Use só o número/código da comanda — sem nome, CPF ou telefone.</p>
+        <form id="invite-form">
+          <label>Referência da conta <input name="accountRef" maxlength="40" required inputmode="text" autocomplete="off" placeholder="ex.: 0423 ou MESA 12"></label>
+          <button class="s-btn primary" type="submit">Gerar convite</button>
+        </form>
+        <div id="invite-out" aria-live="polite"></div>
+      </section>
+
+      <section class="card" role="tabpanel" id="panel-check" aria-labelledby="tab-check" hidden>
+        <h2>Conferir brinde</h2>
+        <p class="help">Consultar não entrega. A entrega só acontece no botão “Confirmar entrega”. Não aceite screenshot como única prova.</p>
+        <form id="check-form">
+          <label>Código do brinde <input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX"></label>
+          <div class="row">
+            <button class="s-btn primary" type="submit">Consultar</button>
+            <button class="s-btn" type="button" id="scan-btn">Ler QR com a câmera</button>
+          </div>
+        </form>
+        <div id="scanner" hidden>
+          <video id="scan-video" playsinline muted></video>
+          <button class="s-btn" type="button" id="scan-stop">Fechar câmera</button>
+        </div>
+        <div id="check-out" aria-live="polite"></div>
+      </section>
+
+      <section class="card" role="tabpanel" id="panel-manage" aria-labelledby="tab-manage" hidden>
+        <h2>Gerenciar campanhas</h2>
+        <p class="help">Campanhas nascem desativadas. A ativação exige brinde, quantidade, regras, período e estoque. Campanhas reais só ativam com autorização explícita no servidor (REAL_CAMPAIGNS_ENABLED).</p>
+        <div id="campaign-list"></div>
+        <details>
+          <summary>Nova campanha</summary>
+          <form id="campaign-form" class="grid">
+            <label>Nome interno <input name="name" required maxlength="120"></label>
+            <label>Nome do brinde (como o cliente verá) <input name="rewardName" maxlength="160"></label>
+            <label>Quantidade por voucher <input name="quantityPerVoucher" type="number" min="1" step="1"></label>
+            <label>Estoque total <input name="totalStock" type="number" min="0" step="1"></label>
+            <label>Início <input name="startsAt" type="datetime-local"></label>
+            <label>Fim <input name="endsAt" type="datetime-local"></label>
+            <label class="wide">Regras públicas <textarea name="rulesText" rows="3" maxlength="2000"></textarea></label>
+            <label>Validade do convite (min) <input name="invitationTtlMinutes" type="number" min="1" value="30"></label>
+            <label>Tempo de partida com reserva (min) <input name="sessionTtlMinutes" type="number" min="1" value="20"></label>
+            <label>Validade do voucher (min) <input name="rewardTtlMinutes" type="number" min="1" value="60"></label>
+            <label class="check" id="is-test-wrap"><input name="isTest" type="checkbox"> Campanha de teste (sem valor de resgate)</label>
+            <button class="s-btn primary" type="submit">Criar (desativada)</button>
+            <p class="msg" id="campaign-msg" role="alert"></p>
+          </form>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="confirm-dialog" aria-labelledby="cd-title">
+    <h2 id="cd-title">Confirmar entrega?</h2>
+    <div id="cd-body"></div>
+    <div class="row">
+      <button class="s-btn primary" id="cd-yes" type="button">Confirmar entrega</button>
+      <button class="s-btn" id="cd-no" type="button">Voltar</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="/src/staff.js"></script>
+</body>
+</html>

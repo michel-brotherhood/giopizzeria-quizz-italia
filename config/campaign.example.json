@@ -1,0 +1,26 @@
+{
+  "mode": "demo",
+  "productionCampaignEnabled": false,
+  "campaign": {
+    "name": "Gio — Da massa ao forno",
+    "rewardName": null,
+    "quantityPerVoucher": null,
+    "totalStock": 0,
+    "startsAt": null,
+    "endsAt": null,
+    "timezone": "America/Sao_Paulo",
+    "eligibility": "authorized_completion",
+    "participationUnit": "account_invitation_proposed",
+    "invitationTtlMinutes": 30,
+    "sessionTtlMinutes": 20,
+    "rewardTtlMinutes": 60,
+    "rulesText": null,
+    "rulesVersion": null
+  },
+  "brand": {
+    "publicBaseUrl": null,
+    "menuUrl": null,
+    "assets": "mateiriais/ — inspecionar arquivos existentes"
+  },
+  "note": "Exemplo de especificação, não configuração pronta de produção. Dados e segredos de campanha real permanecem no servidor."
+}

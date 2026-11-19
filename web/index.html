@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#2a1a13">
+  <meta name="description" content="Da massa ao forno — oito perguntas sobre gastronomia italiana enquanto uma pizza napolitana fica pronta. Gio Pizzeria Napoletana, Niterói.">
+  <title>Da massa ao forno · Gio Pizzeria</title>
+  <link rel="icon" type="image/svg+xml" href="/brand/gio-logo-una-tinta-a.svg">
+  <link rel="preload" href="/fonts/arquitecta-heavy-sub.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/src/styles/app.css">
+</head>
+<body>
+  <a class="skip" href="#painel">Ir para o jogo</a>
+  <div class="app" id="app" data-screen="boot">
+    <header class="topbar">
+      <img class="topbar-logo" src="/brand/gio-logo-tres-tintas-a.svg" alt="Gio Pizzeria Napoletana" width="34" height="48">
+      <div class="topbar-title" aria-hidden="true"><span>Da massa</span> <span>ao forno</span></div>
+      <span class="pill pill-demo" id="mode-pill" hidden>Demonstração</span>
+      <button type="button" class="ghost" id="light-toggle" aria-pressed="false">Modo leve</button>
+    </header>
+
+    <div class="stage" id="stage">
+      <div class="stage-fallback" id="stage-fallback" aria-hidden="true"></div>
+      <div class="stage-frame" aria-hidden="true"></div>
+    </div>
+
+    <main class="panel" id="painel" tabindex="-1">
+      <p class="sr-only" id="scene-status" aria-live="polite"></p>
+
+      <!-- Abertura -->
+      <section class="view" data-view="welcome" aria-labelledby="w-title">
+        <p class="eyebrow">Gio Pizzeria Napoletana · Niterói</p>
+        <h1 id="w-title" class="display">Da massa<br>ao forno</h1>
+        <p class="lead">Oito perguntas, uma viagem pelos sabores da Itália.</p>
+        <p class="hint">Enquanto você responde, uma pizza napolitana vai sendo preparada na bancada — acertando ou não, ela fica pronta no final.</p>
+
+        <div class="offer" id="offer" hidden></div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="btn-start">Começar</button>
+          <button type="button" class="btn btn-secondary" id="btn-how" aria-haspopup="dialog">Como funciona</button>
+        </div>
+
+        <aside class="recognitions" aria-label="Reconhecimentos da Gio Pizzeria">
+          <div class="recog">
+            <img src="/brand/avpn-logo.png" alt="" width="44" height="44" loading="lazy">
+            <p>Certificada AVPN nº 1166</p>
+          </div>
+          <div class="recog">
+            <img src="/brand/50top-excellent-2026.svg" alt="" width="44" height="44" loading="lazy">
+            <p>50 Top Pizza Latin America 2026 — Excellent Pizzerias</p>
+          </div>
+        </aside>
+
+        <details class="about">
+          <summary>Sobre a Gio</summary>
+          <p>Pizzaria napolitana em Niterói, certificada pela Associazione Verace Pizza Napoletana (nº 1166) e listada na categoria Excellent Pizzerias do 50 Top Pizza Latin America 2026.</p>
+          <div class="about-photos">
+            <img src="/photos/gio-18.webp" alt="Pizza da Gio servida em prato branco sobre mesa de madeira" width="720" height="1080" loading="lazy">
+            <img src="/photos/gio-6.webp" alt="Pão de fermentação natural com burrata e alecrim" width="720" height="1080" loading="lazy">
+            <img src="/photos/gio-43.webp" alt="Sobremesa em taça de vidro com calda de frutas vermelhas" width="720" height="1080" loading="lazy">
+          </div>
+          <p class="small">Fontes: <a href="https://www.pizzanapoletana.org/en/associati" rel="noopener noreferrer" target="_blank">AVPN</a> · <a href="https://www.50toppizza.it/50-top-pizza-latin-america-2026-excellent-pizzerias/" rel="noopener noreferrer" target="_blank">50 Top Pizza</a></p>
+        </details>
+      </section>
+
+      <!-- Pergunta -->
+      <section class="view" data-view="question" aria-labelledby="q-text">
+        <div class="q-head">
+          <p class="q-count" id="q-count">Pergunta 1 de 8</p>
+          <p class="q-cat" id="q-cat">Pizza</p>
+        </div>
+        <ol class="progress" id="progress" aria-hidden="true"></ol>
+        <p class="bench" id="bench"></p>
+        <h2 class="q-text" id="q-text" tabindex="-1"></h2>
+        <div class="options" id="options" role="group" aria-labelledby="q-text"></div>
+        <div class="netbox" id="netbox" role="alert" hidden></div>
+        <div class="feedback" id="feedback" hidden>
+          <p class="fb-title" id="fb-title" tabindex="-1"></p>
+          <p class="fb-answer" id="fb-answer"></p>
+          <p class="fb-expl" id="fb-expl"></p>
+          <button type="button" class="btn btn-primary" id="btn-next">Próxima pergunta</button>
+        </div>
+        <p class="score-line" id="score-line" aria-live="off"></p>
+      </section>
+
+      <!-- Conferindo conclusão -->
+      <section class="view" data-view="completing" aria-labelledby="c-title">
+        <h2 id="c-title" class="title" tabindex="-1">Estamos conferindo sua conclusão</h2>
+        <p class="lead" id="c-msg">Só um instante — a pizza está saindo do forno.</p>
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="netbox" id="c-netbox" role="alert" hidden></div>
+      </section>
+
+      <!-- Resultado -->
+      <section class="view" data-view="result" aria-labelledby="r-title">
+        <p class="eyebrow">Pizza pronta</p>
+        <h2 id="r-title" class="display display-sm" tabindex="-1">Você acertou <span id="r-score">0</span> de 8</h2>
+        <p class="lead">A melhor parte é descobrir junto.</p>
+        <div id="voucher-area"></div>
+        <details class="review" id="review">
+          <summary>Rever as respostas</summary>
+          <ol id="review-list"></ol>
+        </details>
+        <div class="actions" id="result-actions"></div>
+      </section>
+
+      <!-- Recuperação / avisos -->
+      <section class="view" data-view="recovery" aria-labelledby="x-title">
+        <h2 id="x-title" class="title" tabindex="-1">Algo não saiu como esperado</h2>
+        <p class="lead" id="x-msg"></p>
+        <div class="actions" id="x-actions"></div>
+      </section>
+
+      <footer class="foot">
+        <p>Jogo de conhecimento, sem cadastro e sem coleta de dados pessoais. A sequência da pizza é ilustrativa.</p>
+      </footer>
+    </main>
+  </div>
+
+  <dialog id="how-dialog" aria-labelledby="how-title">
+    <h2 id="how-title" class="title">Como funciona</h2>
+    <ul class="how-list">
+      <li><strong>Oito perguntas</strong>: quatro sobre pizza napolitana, duas da cozinha italiana e duas de doces e café.</li>
+      <li>A cada resposta, certa ou não, a pizza avança uma etapa — da massa ao forno.</li>
+      <li>Depois de responder você vê a correta e uma explicação curta. Cada acerto vale 100 pontos. Sem cronômetro.</li>
+      <li><strong>Brinde</strong>: só existe com convite entregue pela equipe e campanha ativa. O brinde não depende da pontuação. Sem convite, você joga a versão de demonstração, sem brinde.</li>
+    </ul>
+    <form method="dialog"><button class="btn btn-primary" value="close">Entendi</button></form>
+  </dialog>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "gio-da-massa-ao-forno",
+  "scripts": {
+    "dokku": {
+      "predeploy": "node server/db/migrate.js"
+    }
+  },
+  "healthchecks": {
+    "web": [
+      {
+        "type": "startup",
+        "name": "api-health",
+        "path": "/api/health",
+        "attempts": 5,
+        "timeout": 5,
+        "wait": 3
+      }
+    ]
+  }
+}

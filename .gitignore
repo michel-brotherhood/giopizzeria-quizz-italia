@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.data/
+.env
+.env.*
+!.env.example
+*.log
+test-results/
+playwright-report/
+.api.log
+.vite.log
+.dev-db.log
+# Originais pesados de fotografia/vídeo ficam fora do Git (continuam na pasta materiais/).
+materiais/**/*.CR2
+materiais/**/*.mp4
+materiais/**/Thumbs.db
+# Fonte comercial (Latinotype Arquitecta): não redistribuir em repositório público.
+# Gere o subset localmente (ver docs/ASSETS.md); sem ele o CSS usa fontes de fallback.
+materiais/Marca/Fontes/
+web/public/fonts/*.woff2
