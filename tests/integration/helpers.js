@@ -19,11 +19,17 @@ export async function setupEnv() {
   };
 }
 
-/** Cliente HTTP com cookie jar mínimo (simula um navegador/dispositivo). */
-export function client(base) {
+let regSeq = 0;
+/** Cliente HTTP com cookie jar mínimo (simula um navegador/dispositivo).
+ *  Como no app, o aparelho se cadastra antes de trocar o convite (desligue com { register: false }). */
+export function client(base, { register = true } = {}) {
   const jar = new Map();
   let csrf = null;
   async function call(method, path, body, headers = {}) {
+    if (register && path === '/api/player/exchange' && !jar.has('gio_reg')) {
+      const n = regSeq++;
+      await call('POST', '/api/register', { name: `Cliente ${n}`, email: `cliente${n}.${Date.now()}@teste.local`, phone: `2199${String(1000000 + n).slice(-7)}`, acceptPrivacy: true });
+    }
     const h = { ...headers };
     if (body !== undefined) h['content-type'] = 'application/json';
     if (jar.size) h.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');

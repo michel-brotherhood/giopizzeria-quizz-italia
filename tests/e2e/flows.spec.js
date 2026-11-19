@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { db, createInvite, answerCurrent, settle, STAFF } from './helpers.js';
+import { db, createInvite, answerCurrent, settle, STAFF, MANAGER, openRegistered } from './helpers.js';
 
 test.describe('demonstração', () => {
   test('partida completa: 8 perguntas, feedback, pontuação e nenhum brinde', async ({ page }) => {
-    await page.goto('/');
+    await openRegistered(page, '/');
     await page.getByRole('button', { name: /começar/i }).click();
     let correct = 0;
     for (let i = 1; i <= 8; i++) {
@@ -20,9 +20,49 @@ test.describe('demonstração', () => {
     expect(await page.evaluate(() => window.__gioDebug.stage())).toBe(8);
   });
 
+  test('cadastro obrigatório antes de jogar: validação, política, promoções opcionais e lembrança no aparelho', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#btn-start').click();
+    await expect(page.locator('[data-view="register"]')).toBeVisible();
+    await expect(page.locator('#q-count')).toBeHidden();
+    await page.getByRole('button', { name: 'Cadastrar e começar' }).click();
+    await expect(page.locator('#reg-name-err')).toHaveText('Informe seu nome.');
+    await expect(page.locator('#reg-privacy-err')).toContainText('Política de Privacidade');
+    await expect(page.locator('#reg-name')).toBeFocused();
+    await expect(page.locator('#reg-marketing')).not.toBeChecked();
+    await page.getByLabel('Nome', { exact: true }).fill('Maria Teste');
+    await page.getByLabel('WhatsApp com DDD').fill('(21) 98888-7777');
+    await page.getByLabel('E-mail', { exact: true }).fill('maria-e2e@teste.local');
+    await page.getByRole('button', { name: 'Cadastrar e começar' }).click();
+    await expect(page.locator('#reg-privacy-err')).toContainText('Política de Privacidade');
+    await expect(page.locator('[data-view="question"]')).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Política de Privacidade' }).first()).toHaveAttribute('href', '/privacidade/');
+    await page.locator('#reg-privacy').check();
+    await page.getByRole('button', { name: 'Cadastrar e começar' }).click();
+    await expect(page.locator('#q-count')).toHaveText('Pergunta 1 de 8');
+    const [r] = await db(`SELECT name, phone, marketing_consent, privacy_version FROM registrations WHERE email='maria-e2e@teste.local'`);
+    expect(r).toMatchObject({ name: 'Maria Teste', phone: '5521988887777', marketing_consent: false });
+    expect(r.privacy_version).toBeTruthy();
+    // aparelho lembrado: nova visita vai direto ao jogo, com opção "Não é você?"
+    await page.evaluate(() => sessionStorage.clear());
+    await page.goto('/');
+    await expect(page.locator('#reg-who')).toContainText('Maria');
+    await page.locator('#btn-start').click();
+    await expect(page.locator('#q-count')).toHaveText('Pergunta 1 de 8');
+  });
+
+  test('política de privacidade publicada com a controladora e os direitos do titular', async ({ page }) => {
+    await page.goto('/privacidade/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Política de Privacidade');
+    await expect(page.locator('main')).toContainText('CNPJ 38.382.216/0001-31');
+    await expect(page.locator('main')).toContainText('privacidade@giopizzeria.com.br');
+    await expect(page.locator('main')).toContainText('Seus direitos');
+    await expect(page.locator('.doc-foot')).toContainText('©');
+  });
+
   test('storage corrompido não quebra a abertura', async ({ page }) => {
     await page.addInitScript(() => { sessionStorage.setItem('gio.demo.v1', '{quebrado'); localStorage.setItem('gio.demo.seen', 'x{'); });
-    await page.goto('/');
+    await openRegistered(page, '/');
     await expect(page.locator('#btn-start')).toBeVisible();
     await page.locator('#btn-start').click();
     await expect(page.locator('#q-count')).toHaveText('Pergunta 1 de 8');
@@ -33,7 +73,7 @@ test.describe('demonstração', () => {
       const orig = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/.test(type) ? null : orig.call(this, type, ...a); };
     });
-    await page.goto('/');
+    await openRegistered(page, '/');
     await expect(page.locator('#app')).toHaveAttribute('data-render', 'image');
     await expect(page.locator('#stage-poster')).toBeVisible();
     await expect(page.locator('#light-toggle')).toHaveCount(0);
@@ -44,7 +84,7 @@ test.describe('demonstração', () => {
   });
 
   test('seleção não revela a correta; confirmar envia uma única resposta', async ({ page }) => {
-    await page.goto('/');
+    await openRegistered(page, '/');
     await page.locator('#btn-start').click();
     await expect(page.locator('#btn-confirm')).toBeDisabled();
     await page.locator('.opt').nth(1).click();
@@ -70,7 +110,7 @@ test.describe('demonstração', () => {
   });
 
   test('teclado: começar, responder e avançar sem mouse', async ({ page }) => {
-    await page.goto('/');
+    await openRegistered(page, '/');
     await page.locator('#btn-start').focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#q-text')).toBeFocused();
@@ -92,7 +132,7 @@ test.describe('demonstração', () => {
 test.describe('campanha de teste autorizada', () => {
   test('convite -> partida -> voucher -> equipe confirma -> cliente vê entrega', async ({ page, request, browser }) => {
     const inv = await createInvite(request, 'E2E-FLUXO-1');
-    await page.goto(inv.url.replace('http://localhost:3100', ''));
+    await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     // token removido da barra de endereço imediatamente
     await expect.poll(() => page.url()).not.toContain('convite=');
     await expect(page.locator('.offer')).toContainText('DEMONSTRAÇÃO — SEM VALOR DE RESGATE');
@@ -142,7 +182,7 @@ test.describe('campanha de teste autorizada', () => {
 
   test('rede cai ao enviar resposta: mantém seleção, não avança, reenvia com a mesma chave', async ({ page, request }) => {
     const inv = await createInvite(request, 'E2E-REDE-1');
-    await page.goto(inv.url.replace('http://localhost:3100', ''));
+    await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     await page.getByRole('button', { name: 'Começar com brinde' }).click();
     const keys = [];
     let fail = true;
@@ -166,7 +206,7 @@ test.describe('campanha de teste autorizada', () => {
 
   test('recarregar no meio da partida retoma a mesma pergunta do servidor', async ({ page, request }) => {
     const inv = await createInvite(request, 'E2E-RELOAD-1');
-    await page.goto(inv.url.replace('http://localhost:3100', ''));
+    await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     await page.getByRole('button', { name: 'Começar com brinde' }).click();
     for (let i = 0; i < 3; i++) { await answerCurrent(page); await page.locator('#btn-next').click(); }
     const q = await page.locator('#q-text').textContent();
@@ -178,7 +218,7 @@ test.describe('campanha de teste autorizada', () => {
 
   test('falha de rede na conclusão: "conferindo", sem voucher inventado; depois um único voucher', async ({ page, request }) => {
     const inv = await createInvite(request, 'E2E-COMPLETE-1');
-    await page.goto(inv.url.replace('http://localhost:3100', ''));
+    await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     await page.getByRole('button', { name: 'Começar com brinde' }).click();
     for (let i = 0; i < 7; i++) { await answerCurrent(page); await page.locator('#btn-next').click(); }
     await answerCurrent(page);
@@ -200,7 +240,7 @@ test.describe('campanha de teste autorizada', () => {
     const path = inv.url.replace('http://localhost:3100', '');
     const a = await (await browser.newContext()).newPage();
     const b = await (await browser.newContext()).newPage();
-    await a.goto(path); await b.goto(path);
+    await openRegistered(a, path); await openRegistered(b, path);
     await Promise.all([a.getByRole('button', { name: 'Começar com brinde' }).click(), b.getByRole('button', { name: 'Começar com brinde' }).click()]);
     await expect(a.locator('[data-view="question"]')).toBeVisible();
     await expect(b.locator('[data-view="question"]')).toBeVisible();
@@ -220,7 +260,7 @@ test.describe('campanha de teste autorizada', () => {
 
   test('link do QR na equipe (#v=) só consulta: GET nunca entrega', async ({ browser, request, page }) => {
     const inv = await createInvite(request, 'E2E-QR-1');
-    await page.goto(inv.url.replace('http://localhost:3100', ''));
+    await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     await page.getByRole('button', { name: 'Começar com brinde' }).click();
     for (let i = 0; i < 8; i++) { await answerCurrent(page); await page.locator('#btn-next').click(); }
     await expect(page.locator('.voucher .qr svg')).toBeVisible();
@@ -253,6 +293,27 @@ test.describe('campanha de teste autorizada', () => {
     await page.getByRole('tab', { name: 'Conferir brinde' }).click();
     await page.getByRole('button', { name: 'Ler QR com a câmera' }).click();
     await expect(page.locator('#check-out')).toContainText(/Digite o código/);
+  });
+
+  test('cadastros: só o gerente vê a aba e baixa a planilha', async ({ browser }) => {
+    const reg = await (await browser.newContext()).newPage();
+    await openRegistered(reg, '/');
+    const att = await (await browser.newContext()).newPage();
+    await att.goto('/equipe/');
+    await att.getByLabel('Usuário').fill(STAFF.username);
+    await att.getByLabel('Senha').fill(STAFF.password);
+    await att.getByRole('button', { name: 'Entrar' }).click();
+    await expect(att.locator('.counters')).toBeVisible();
+    await expect(att.getByRole('tab', { name: 'Cadastros' })).toBeHidden();
+    const mgr = await (await browser.newContext()).newPage();
+    await mgr.goto('/equipe/');
+    await mgr.getByLabel('Usuário').fill(MANAGER.username);
+    await mgr.getByLabel('Senha').fill(MANAGER.password);
+    await mgr.getByRole('button', { name: 'Entrar' }).click();
+    await mgr.getByRole('tab', { name: 'Cadastros' }).click();
+    await expect(mgr.locator('#regs-body table')).toContainText('@teste.local');
+    const [download] = await Promise.all([mgr.waitForEvent('download'), mgr.locator('#regs-csv').click()]);
+    expect(download.suggestedFilename()).toMatch(/^cadastros-gio-\d{4}-\d{2}-\d{2}\.csv$/);
   });
 
   test('bundle público não contém segredos nem rotas de PIN', async ({ request }) => {

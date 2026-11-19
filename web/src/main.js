@@ -3,7 +3,7 @@
 // O estado do brinde vem SEMPRE do servidor; a cena 3D só recebe eventos.
 import bank from '../../content/questions.seed.json';
 import { DemoAdapter, ServerAdapter, store } from './game/adapters.js';
-import { newKey } from './game/api.js';
+import { api, newKey } from './game/api.js';
 import { CATEGORY_LABELS, ROUND_SIZE } from '../../shared/quiz.js';
 
 const $ = (id) => document.getElementById(id);
@@ -41,6 +41,7 @@ const ctx = {
   pending: null,         // { questionId, selectedOptionId, key }
   busy: false,
   serverVoucherState: null,
+  registration: null,    // { registered, firstName } — vem do servidor (cookie httpOnly)
   retryTimer: null,
   pollTimer: null,
 };
@@ -107,6 +108,11 @@ function show(screen, focusId) {
   const inGame = screen === 'question' || screen === 'completing' || screen === 'result';
   $('progress-wrap').hidden = !inGame;
   $('q-count').hidden = screen !== 'question';
+  // fora das perguntas o canto direito do cabeçalho identifica o quiz (ou mostra a conclusão)
+  const info = $('topbar-info');
+  info.hidden = screen === 'question';
+  if (screen === 'result' || screen === 'completing') info.replaceChildren(el('strong', {}, 'Partida concluída'), el('span', {}, '8 de 8 perguntas'));
+  else info.replaceChildren(el('strong', {}, 'Quiz de gastronomia italiana'), el('span', {}, '8 perguntas, uma pizza'));
   if (screen === 'completing' || screen === 'result') renderProgress(ROUND_SIZE);
   if (focusId) requestAnimationFrame(() => $(focusId)?.focus({ preventScroll: false }));
 }
@@ -491,6 +497,8 @@ async function startWithInvite() {
     if (e.network) {
       const offer = $('offer');
       offer.append(el('p', { role: 'alert' }, 'Sem conexão para conferir o convite. Tente novamente em instantes.'));
+    } else if (e.code === 'REGISTRATION_REQUIRED') {
+      ctx.registration = null; renderWho(); showRegister();
     } else {
       ctx.inviteToken = null;
       showServerError(e);
@@ -537,8 +545,84 @@ async function resumeServer() {
   }
 }
 
+// ---------------------------------------------------------------- cadastro
+function proceedToGame() {
+  if (ctx.inviteToken) return startWithInvite();
+  startDemo();
+}
+
+function renderWho() {
+  const who = $('reg-who');
+  if (!ctx.registration?.registered) { who.hidden = true; return; }
+  who.hidden = false;
+  who.replaceChildren(`Cadastro: ${ctx.registration.firstName}. `,
+    el('button', { type: 'button', class: 'linklike', onclick: forgetRegistration }, 'Não é você?'));
+}
+
+async function forgetRegistration() {
+  try { await api('/api/register/leave', { method: 'POST', body: {} }); } catch { /* sem rede: só esquece localmente */ }
+  ctx.registration = null;
+  renderWho();
+  showRegister();
+}
+
+function showRegister() {
+  $('reg-msg').hidden = true;
+  for (const f of ['name', 'phone', 'email', 'privacy']) setFieldError(f, '');
+  show('register', 'g-title');
+}
+
+function setFieldError(field, msg) {
+  const input = $(`reg-${field}`);
+  $(`reg-${field}-err`).textContent = msg;
+  if (msg) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+}
+
+async function submitRegistration(ev) {
+  ev.preventDefault();
+  if (ctx.busy) return;
+  const f = ev.target;
+  const body = {
+    name: f.name.value, phone: f.phone.value, email: f.email.value,
+    acceptPrivacy: f.acceptPrivacy.checked, marketingConsent: f.marketingConsent.checked,
+  };
+  const local = {};
+  if (body.name.trim().length < 2) local.name = 'Informe seu nome.';
+  if (body.phone.replace(/\D/g, '').length < 10) local.phone = 'Informe um WhatsApp com DDD.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email.trim())) local.email = 'Informe um e-mail válido.';
+  if (!body.acceptPrivacy) local.acceptPrivacy = 'É preciso aceitar a Política de Privacidade para participar.';
+  showFieldErrors(local);
+  if (Object.keys(local).length) return;
+  const btn = $('reg-submit');
+  ctx.busy = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+  $('reg-msg').hidden = true;
+  try {
+    ctx.registration = await api('/api/register', { method: 'POST', body });
+    renderWho();
+    f.reset();
+    ctx.busy = false;
+    proceedToGame();
+  } catch (e) {
+    if (e.code === 'REGISTRATION_INVALID' && e.details?.fields) showFieldErrors(e.details.fields);
+    else { $('reg-msg').hidden = false; $('reg-msg').textContent = e.network ? 'Sem conexão para enviar o cadastro. Confira a internet e tente de novo.' : e.message; }
+  } finally {
+    ctx.busy = false; btn.disabled = false; btn.removeAttribute('aria-busy');
+  }
+}
+
+function showFieldErrors(fields) {
+  const map = { name: 'name', phone: 'phone', email: 'email', acceptPrivacy: 'privacy' };
+  let first = null;
+  for (const [k, id] of Object.entries(map)) {
+    setFieldError(id, fields[k] ?? '');
+    if (fields[k] && !first) first = id;
+  }
+  if (first) $(`reg-${first}`).focus();
+}
+
 // ---------------------------------------------------------------- boot
 async function boot() {
+  $('copy-year').textContent = String(new Date().getFullYear());
   // Convite chega no fragmento (#convite=...): lido em memória e removido da URL imediatamente.
   const m = location.hash.match(/convite=([A-Za-z0-9_-]{20,200})/);
   if (m) {
@@ -550,15 +634,18 @@ async function boot() {
   $('btn-next').addEventListener('click', next);
   $('btn-confirm').addEventListener('click', confirmAnswer);
   $('btn-start').addEventListener('click', () => {
-    if (ctx.inviteToken) return startWithInvite();
-    startDemo();
+    if (!ctx.registration?.registered) return showRegister();
+    proceedToGame();
   });
+  $('reg-form').addEventListener('submit', submitRegistration);
+  $('reg-back').addEventListener('click', () => show('welcome', 'btn-start'));
 
   // A cena carrega em paralelo; o CTA não espera por ela.
   mountScene();
 
-  const [campaign, resumed] = await Promise.all([
+  const [campaign, , resumed] = await Promise.all([
     fetch('/api/campaign/current', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    api('/api/register/me').then((r) => { ctx.registration = r; renderWho(); }).catch(() => { ctx.registration = null; }),
     ctx.inviteToken ? Promise.resolve(false) : resumeServer(),
   ]);
   ctx.campaign = campaign?.mode === 'campaign' ? campaign.campaign : null;

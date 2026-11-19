@@ -45,3 +45,14 @@ export async function noHorizontalScroll(page) {
   const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
   expect(sw, `scroll horizontal: ${sw} > ${cw}`).toBeLessThanOrEqual(cw);
 }
+
+let regN = 0;
+/** Cadastra este aparelho (mesmo cookie jar da página) e abre a URL — como quem já fez o cadastro. */
+export async function openRegistered(page, url) {
+  const n = regN++;
+  const r = await page.request.post('/api/register', {
+    data: { name: `Cliente E2E ${n}`, email: `e2e${n}.${Date.now()}@teste.local`, phone: `2198${String(1000000 + n).slice(-7)}`, acceptPrivacy: true },
+  });
+  expect(r.status(), await r.text()).toBe(201);
+  await page.goto(url);
+}

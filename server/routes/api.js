@@ -1,14 +1,16 @@
 import express from 'express';
 import { config } from '../config.js';
 import { err } from '../errors.js';
-import { PLAYER_COOKIE, STAFF_COOKIE, cookieOpts, requirePlayer, requireStaff, limits } from '../middleware/security.js';
+import { PLAYER_COOKIE, STAFF_COOKIE, REG_COOKIE, cookieOpts, requirePlayer, requireStaff, limits } from '../middleware/security.js';
 import { campaignView, getActiveCampaign, getCurrentForStaff, createCampaign, updateCampaign, setCampaignState, missingForActivation } from '../services/campaigns.js';
 import { exchangeInvitation, getSessionState, answerQuestion, completeSession } from '../services/player.js';
 import { login, logout, operatorView, createInvitation, lookupVoucher, redeemVoucher, recentInvitations } from '../services/staff.js';
+import { register, registrationFromToken, registrationSummary, registrationsCsv, deleteRegistration, PRIVACY_VERSION } from '../services/registrations.js';
 import QRCode from 'qrcode';
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const PLAYER_COOKIE_MS = 24 * 3600_000;
+const REG_COOKIE_MS = 180 * 24 * 3600_000; // lembra o cadastro neste aparelho por até 180 dias
 
 export function apiRouter(pool) {
   const r = express.Router();
@@ -27,9 +29,26 @@ export function apiRouter(pool) {
     res.json({ mode: c ? 'campaign' : 'demo', campaign: c ? campaignView(c) : null });
   }));
 
+  // ---------- cadastro (obrigatório antes de jogar) ----------
+  r.get('/register/me', limits.player(), wrap(async (req, res) => {
+    const reg = await registrationFromToken(pool, req.cookies?.[REG_COOKIE]);
+    res.json(reg ? { registered: true, firstName: reg.firstName, privacyVersion: PRIVACY_VERSION } : { registered: false, privacyVersion: PRIVACY_VERSION });
+  }));
+  r.post('/register', limits.exchange(), wrap(async (req, res) => {
+    const out = await register(pool, req.body ?? {});
+    res.cookie(REG_COOKIE, out.token, cookieOpts(REG_COOKIE_MS));
+    res.status(201).json({ registered: true, firstName: out.firstName, privacyVersion: PRIVACY_VERSION });
+  }));
+  r.post('/register/leave', wrap(async (_req, res) => {
+    res.clearCookie(REG_COOKIE, { ...cookieOpts(0), maxAge: undefined });
+    res.json({ ok: true });
+  }));
+
   // ---------- jogador ----------
   r.post('/player/exchange', limits.exchange(), wrap(async (req, res) => {
-    const out = await exchangeInvitation(pool, req.body?.token);
+    const reg = await registrationFromToken(pool, req.cookies?.[REG_COOKIE]);
+    if (!reg) throw err('REGISTRATION_REQUIRED');
+    const out = await exchangeInvitation(pool, req.body?.token, reg.id);
     res.cookie(PLAYER_COOKIE, out.credential, cookieOpts(PLAYER_COOKIE_MS));
     res.json({ resumed: out.resumed, ...(await getSessionState(pool, out.sessionId)) });
   }));
@@ -94,6 +113,20 @@ export function apiRouter(pool) {
 
   r.post('/staff/vouchers/redeem', staff, limits.lookup(), wrap(async (req, res) => {
     res.json({ voucher: await redeemVoucher(pool, req.staff, req.body?.code, req.get('idempotency-key')) });
+  }));
+
+  // ---------- gerente: cadastros ----------
+  r.get('/staff/registrations', manager, limits.staff(), wrap(async (_req, res) => {
+    res.json(await registrationSummary(pool));
+  }));
+  r.get('/staff/registrations.csv', manager, limits.staff(), wrap(async (req, res) => {
+    const csv = await registrationsCsv(pool, req.staff);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="cadastros-gio-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csv);
+  }));
+  r.post('/staff/registrations/delete', manager, limits.staff(), wrap(async (req, res) => {
+    res.json(await deleteRegistration(pool, req.staff, req.body?.email));
   }));
 
   // ---------- gerente: campanha ----------

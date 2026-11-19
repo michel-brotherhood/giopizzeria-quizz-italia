@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import bank from '../../content/questions.seed.json' with { type: 'json' };
 import { drawRound, seededRng } from '../../shared/quiz.js';
-import { createInvite, answerCurrent, settle, noHorizontalScroll, STAFF } from './helpers.js';
+import { createInvite, answerCurrent, settle, noHorizontalScroll, STAFF, openRegistered } from './helpers.js';
 
 const OUT = 'docs/screenshots';
 fs.mkdirSync(OUT, { recursive: true });
@@ -24,7 +24,7 @@ for (const [w, h] of VIEWPORTS) {
 
     test('abertura, pergunta longa, feedback e resultado (demo)', async ({ page }) => {
       test.setTimeout(240_000); // 8 perguntas + capturas com WebGL por software
-      await page.goto('/');
+      await openRegistered(page, '/');
       await page.waitForTimeout(2500);
       await noHorizontalScroll(page);
       const cta = await page.locator('#btn-start').boundingBox();
@@ -67,7 +67,7 @@ for (const [w, h] of [[390, 844], [1440, 900], [844, 390]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await ctx.newPage();
     const inv = await createInvite(request, `VIS-${w}`);
-    await page.goto(inv.url.replace('http://localhost:3100', ''));
+    await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `${OUT}/${w}x${h}-05-convite.png`, fullPage: true });
     await page.getByRole('button', { name: 'Começar com brinde' }).click();
@@ -101,7 +101,7 @@ for (const [w, h] of [[390, 844], [1440, 900], [844, 390]]) {
 test('zoom 200% (1440x900 a 200% = 720x450 CSS px) sem scroll horizontal', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 720, height: 450 }, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
-  await page.goto('/');
+  await openRegistered(page, '/');
   await page.waitForTimeout(2000);
   await noHorizontalScroll(page);
   await page.screenshot({ path: `${OUT}/zoom200-01-abertura.png` });
@@ -115,7 +115,7 @@ test('zoom 200% (1440x900 a 200% = 720x450 CSS px) sem scroll horizontal', async
 test('movimento reduzido: troca direta de etapa', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
   const page = await ctx.newPage();
-  await page.goto('/');
+  await openRegistered(page, '/');
   await page.waitForTimeout(2000);
   await page.locator('#btn-start').click();
   await answerCurrent(page);
@@ -132,7 +132,7 @@ test('sem WebGL: ilustração automática mantém identidade e jogo', async ({ p
     HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/.test(type) ? null : orig.call(this, type, ...a); };
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await openRegistered(page, '/');
   await expect(page.locator('#app')).toHaveAttribute('data-render', 'image');
   await page.screenshot({ path: `${OUT}/sem-webgl-01-abertura.png` });
   await page.locator('#btn-start').click();
@@ -154,7 +154,7 @@ test('falha ao carregar imagens do cenário não bloqueia o jogo', async ({ page
     HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/.test(type) ? null : orig.call(this, type, ...a); };
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await openRegistered(page, '/');
   await page.locator('#btn-start').click();
   await answerCurrent(page);
   await expect(page.locator('#stage-poster')).toBeHidden();
@@ -165,7 +165,7 @@ test('falha ao carregar imagens do cenário não bloqueia o jogo', async ({ page
 test('320 px de largura: sem rolagem horizontal, alternativas e confirmação acessíveis', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 320, height: 640 } });
   const page = await ctx.newPage();
-  await page.goto('/');
+  await openRegistered(page, '/');
   await noHorizontalScroll(page);
   await page.locator('#btn-start').click();
   await noHorizontalScroll(page);
@@ -181,7 +181,7 @@ test('320 px de largura: sem rolagem horizontal, alternativas e confirmação ac
 
 test('métricas da cena 3D', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await openRegistered(page, '/');
   await page.waitForTimeout(3000);
   const info = await page.evaluate(() => window.__gioDebug.sceneInfo());
   fs.writeFileSync(`${OUT}/scene-metrics-390.json`, JSON.stringify(info, null, 2));

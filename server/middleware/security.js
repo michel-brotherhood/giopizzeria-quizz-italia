@@ -7,6 +7,7 @@ import { sessionIdFromCredential } from '../services/player.js';
 
 export const PLAYER_COOKIE = 'gio_player';
 export const STAFF_COOKIE = 'gio_staff';
+export const REG_COOKIE = 'gio_reg';
 
 export function cookieOpts(maxAgeMs) {
   return { httpOnly: true, secure: config.COOKIE_SECURE, sameSite: 'strict', path: '/', maxAge: maxAgeMs };

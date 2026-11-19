@@ -60,6 +60,7 @@ function onLogged(r) {
   const env = $('env');
   if (r.env && r.env !== 'production') { env.hidden = false; env.textContent = `ambiente: ${r.env}`; }
   $('tab-manage').hidden = me.role !== 'manager';
+  $('tab-regs').hidden = me.role !== 'manager';
   if (r.env === 'production') $('is-test-wrap').hidden = true;
   refreshOverview();
   if (pendingVoucherInput) { selectTab('check'); lookup(pendingVoucherInput); }
@@ -86,13 +87,48 @@ $('logout').addEventListener('click', async () => {
 
 // ---------- abas ----------
 function selectTab(name) {
-  for (const t of ['invite', 'check', 'manage']) {
+  for (const t of ['invite', 'check', 'manage', 'regs']) {
     $(`tab-${t}`).setAttribute('aria-selected', String(t === name));
     $(`panel-${t}`).hidden = t !== name;
   }
   if (name === 'manage') loadCampaigns();
+  if (name === 'regs') loadRegistrations();
 }
-for (const t of ['invite', 'check', 'manage']) $(`tab-${t}`).addEventListener('click', () => selectTab(t));
+for (const t of ['invite', 'check', 'manage', 'regs']) $(`tab-${t}`).addEventListener('click', () => selectTab(t));
+
+// ---------- cadastros (gerente) ----------
+const fmtDT = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+async function loadRegistrations() {
+  const body = $('regs-body');
+  try {
+    const r = await call('/api/staff/registrations');
+    body.replaceChildren(
+      el('dl', { class: 'counters' },
+        el('div', {}, el('dt', {}, 'Cadastros'), el('dd', {}, String(r.total))),
+        el('div', {}, el('dt', {}, 'Aceitam promoções'), el('dd', {}, String(r.marketing))),
+        el('div', {}, el('dt', {}, 'Últimas 24 h'), el('dd', {}, String(r.last24h)))),
+      r.recent.length ? el('div', { class: 'table-wrap' }, el('table', {},
+        el('thead', {}, el('tr', {}, el('th', {}, 'Nome'), el('th', {}, 'WhatsApp'), el('th', {}, 'E-mail'), el('th', {}, 'Promoções'), el('th', {}, 'Quando'))),
+        el('tbody', {}, ...r.recent.map((x) => el('tr', {},
+          el('td', {}, x.name), el('td', {}, `+${x.phone}`), el('td', {}, x.email), el('td', {}, x.marketing ? 'sim' : 'não'), el('td', {}, fmtDT.format(new Date(x.createdAt)))))))) : el('p', { class: 'help' }, 'Nenhum cadastro ainda.'));
+  } catch (e) {
+    body.replaceChildren(el('p', { class: 'msg' }, errText(e)));
+  }
+}
+$('regs-del-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const email = ev.target.email.value.trim();
+  const msg = $('regs-del-msg');
+  if (!email || !window.confirm(`Excluir definitivamente o cadastro de ${email}?`)) return;
+  try {
+    await call('/api/staff/registrations/delete', { method: 'POST', body: { email } });
+    msg.textContent = 'Cadastro excluído.';
+    ev.target.reset();
+    loadRegistrations();
+  } catch (e) {
+    msg.textContent = errText(e);
+  }
+});
 
 // ---------- visão geral ----------
 async function refreshOverview() {

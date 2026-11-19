@@ -47,7 +47,7 @@ export async function expireVoucherIfDue(c, v, now = new Date()) {
 }
 
 /** POST /api/player/exchange — troca convite por sessão, reservando 1 unidade. Idempotente por convite. */
-export async function exchangeInvitation(pool, inviteToken) {
+export async function exchangeInvitation(pool, inviteToken, registrationId = null) {
   if (typeof inviteToken !== 'string' || inviteToken.length < 20 || inviteToken.length > 200) throw err('INVITATION_INVALID');
   return tx(pool, async (c) => {
     const { rows: [inv] } = await c.query('SELECT * FROM invitations WHERE token_hash=$1 FOR UPDATE', [sha256(inviteToken)]);
@@ -79,9 +79,9 @@ export async function exchangeInvitation(pool, inviteToken) {
     const round = drawRound(QUESTIONS, cryptoRng);
     const expiresAt = minDate(now.getTime() + camp.session_ttl_minutes * 60_000, camp.ends_at);
     const { rows: [s] } = await c.query(
-      `INSERT INTO quiz_sessions (public_id, campaign_id, invitation_id, content_version, question_order, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [randomToken(12), camp.id, inv.id, CONTENT_VERSION, JSON.stringify(round), expiresAt.toISOString()],
+      `INSERT INTO quiz_sessions (public_id, campaign_id, invitation_id, content_version, question_order, expires_at, registration_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [randomToken(12), camp.id, inv.id, CONTENT_VERSION, JSON.stringify(round), expiresAt.toISOString(), registrationId],
     );
     await c.query('UPDATE campaigns SET reserved_count = reserved_count + 1, updated_at=now() WHERE id=$1', [camp.id]);
     await c.query(`UPDATE invitations SET state='exchanged', exchanged_at=now() WHERE id=$1`, [inv.id]);

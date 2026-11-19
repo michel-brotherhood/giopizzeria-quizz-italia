@@ -46,6 +46,9 @@ const M = {
   CAMPAIGN_NOT_FOUND: [404, 'Campanha não encontrada.'],
   INVALID_STATE: [409, 'Operação não permitida no estado atual.'],
   NOT_FOUND: [404, 'Não encontrado.'],
+  REGISTRATION_REQUIRED: [401, 'Faça seu cadastro para jogar.'],
+  REGISTRATION_INVALID: [400, 'Confira os dados do cadastro.'],
+  REGISTRATION_NOT_FOUND: [404, 'Nenhum cadastro com este e-mail.'],
 };
 
 export function err(code, extra, message) {

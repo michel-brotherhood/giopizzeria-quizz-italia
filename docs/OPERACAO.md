@@ -57,3 +57,9 @@ O app registra só método, caminho (sem query), status e duração para `/api/*
 
 ## Rollback
 `dokku ps:rollback` / redeploy de um commit anterior. As migrations são aditivas; não há passo que invalide vouchers em circulação. Manter o mesmo `SESSION_SECRET`.
+
+## Cadastros de clientes (LGPD)
+- Gerente: painel `/equipe/` → aba **Cadastros** → **Baixar planilha (CSV)**. Use para promoções **apenas** as linhas com `aceita_promocoes = sim`.
+- Pedido de exclusão: aba Cadastros → “Excluir cadastro a pedido do cliente” (por e-mail). A partida e o brinde já emitidos continuam válidos, sem o vínculo pessoal.
+- Pedidos de acesso/correção chegam em `privacidade@giopizzeria.com.br` — **criar e monitorar essa caixa**; responder em até 15 dias (prazo declarado na política).
+- Mudou a política? Atualize o texto e `PRIVACY_VERSION` em `server/services/registrations.js` (o próximo cadastro registra a nova versão).

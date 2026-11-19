@@ -38,6 +38,7 @@
         <button role="tab" id="tab-invite" aria-controls="panel-invite" aria-selected="true">Convite</button>
         <button role="tab" id="tab-check" aria-controls="panel-check" aria-selected="false">Conferir brinde</button>
         <button role="tab" id="tab-manage" aria-controls="panel-manage" aria-selected="false" hidden>Gerenciar</button>
+        <button role="tab" id="tab-regs" aria-controls="panel-regs" aria-selected="false" hidden>Cadastros</button>
       </nav>
 
       <section class="card" role="tabpanel" id="panel-invite" aria-labelledby="tab-invite">
@@ -67,6 +68,21 @@
         <div id="check-out" aria-live="polite"></div>
       </section>
 
+      <section class="card" role="tabpanel" id="panel-regs" aria-labelledby="tab-regs" hidden>
+        <h2>Cadastros de clientes</h2>
+        <p class="help">Dados pessoais: use só para as finalidades da Política de Privacidade. Envie promoções apenas para quem autorizou (coluna “aceita_promocoes = sim”). Não compartilhe a planilha.</p>
+        <div id="regs-body"><p>Carregando…</p></div>
+        <div class="row"><a class="s-btn primary" id="regs-csv" href="/api/staff/registrations.csv" download>Baixar planilha (CSV)</a></div>
+        <details class="regs-del">
+          <summary>Excluir cadastro a pedido do cliente</summary>
+          <form id="regs-del-form">
+            <label>E-mail do cadastro <input name="email" type="email" autocomplete="off" required></label>
+            <button class="s-btn danger" type="submit">Excluir cadastro</button>
+            <p class="msg" id="regs-del-msg" role="status"></p>
+          </form>
+        </details>
+      </section>
+
       <section class="card" role="tabpanel" id="panel-manage" aria-labelledby="tab-manage" hidden>
         <h2>Gerenciar campanhas</h2>
         <p class="help">Campanhas nascem desativadas. A ativação exige brinde, quantidade, regras, período e estoque. Campanhas reais só ativam com autorização explícita no servidor (REAL_CAMPAIGNS_ENABLED).</p>
@@ -92,6 +108,7 @@
       </section>
     </div>
   </main>
+  <footer class="s-foot"><p>© 2026 Gio Pizzeria Napoletana, Niterói. Todos os direitos reservados.</p></footer>
 
   <dialog id="confirm-dialog" aria-labelledby="cd-title">
     <h2 id="cd-title">Confirmar entrega?</h2>

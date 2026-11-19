@@ -21,6 +21,7 @@
       <div class="topbar-end">
         <span class="pill pill-demo" id="mode-pill" hidden>Demonstração</span>
         <p class="q-count" id="q-count" hidden>Pergunta 1 de 8</p>
+        <p class="topbar-info" id="topbar-info"><strong>Quiz de gastronomia italiana</strong><span>8 perguntas, uma pizza</span></p>
       </div>
     </header>
 
@@ -46,6 +47,7 @@
           <button type="button" class="btn btn-primary" id="btn-start">Começar</button>
           <button type="button" class="btn btn-secondary" id="btn-how" aria-haspopup="dialog">Como funciona</button>
         </div>
+        <p class="reg-who" id="reg-who" hidden></p>
         <details class="about">
           <summary>Sobre a Gio</summary>
           <p>Pizzaria napolitana em Niterói, certificada pela Associazione Verace Pizza Napoletana (nº 1166) e listada na categoria Excellent Pizzerias do 50 Top Pizza Latin America 2026.</p>
@@ -56,6 +58,43 @@
           </div>
           <p class="small">Fontes: <a href="https://www.pizzanapoletana.org/en/associati" rel="noopener noreferrer" target="_blank">AVPN</a> e <a href="https://www.50toppizza.it/50-top-pizza-latin-america-2026-excellent-pizzerias/" rel="noopener noreferrer" target="_blank">50 Top Pizza</a></p>
         </details>
+      </section>
+
+      <!-- Cadastro (obrigatório antes de jogar) -->
+      <section class="view" data-view="register" aria-labelledby="g-title">
+        <h2 id="g-title" class="title" tabindex="-1">Antes de começar</h2>
+        <p class="lead">Faça seu cadastro para jogar. Usamos seus dados para identificar sua participação e, se você autorizar, para enviar novidades da Gio.</p>
+        <form class="reg-form" id="reg-form" novalidate>
+          <div class="field">
+            <label for="reg-name">Nome</label>
+            <input id="reg-name" name="name" autocomplete="name" maxlength="80" required aria-describedby="reg-name-err">
+            <p class="field-err" id="reg-name-err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="reg-phone">WhatsApp com DDD</label>
+            <input id="reg-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="20" placeholder="(21) 99999-9999" required aria-describedby="reg-phone-err">
+            <p class="field-err" id="reg-phone-err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="reg-email">E-mail</label>
+            <input id="reg-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" autocapitalize="none" spellcheck="false" required aria-describedby="reg-email-err">
+            <p class="field-err" id="reg-email-err" aria-live="polite"></p>
+          </div>
+          <div class="check">
+            <input id="reg-privacy" name="acceptPrivacy" type="checkbox" required aria-describedby="reg-privacy-err">
+            <label for="reg-privacy">Li e aceito a <a href="/privacidade/" target="_blank" rel="noopener">Política de Privacidade</a>.</label>
+          </div>
+          <p class="field-err" id="reg-privacy-err" aria-live="polite"></p>
+          <div class="check">
+            <input id="reg-marketing" name="marketingConsent" type="checkbox">
+            <label for="reg-marketing">Quero receber novidades e promoções da Gio por WhatsApp e e-mail (opcional; você pode cancelar quando quiser).</label>
+          </div>
+          <p class="netbox" id="reg-msg" role="alert" hidden></p>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="reg-submit">Cadastrar e começar</button>
+            <button type="button" class="btn btn-secondary" id="reg-back">Voltar</button>
+          </div>
+        </form>
       </section>
 
       <!-- Pergunta -->
@@ -117,13 +156,15 @@
           <span>Excellent Pizzerias — 50 Top Pizza Latin America 2026</span>
         </li>
       </ul>
-      <p class="legal">Jogo de conhecimento, sem cadastro e sem coleta de dados pessoais. A pizza da animação é ilustrativa.</p>
+      <p class="foot-links"><a href="/privacidade/">Política de Privacidade</a></p>
+      <p class="copyright">© <span id="copy-year">2026</span> Gio Pizzeria Napoletana, Niterói. Todos os direitos reservados.</p>
     </footer>
   </div>
 
   <dialog id="how-dialog" aria-labelledby="how-title">
     <h2 id="how-title" class="title">Como funciona</h2>
     <ul class="how-list">
+      <li><strong>Cadastro</strong>: para jogar, informe nome, WhatsApp e e-mail e aceite a Política de Privacidade. Receber promoções é opcional.</li>
       <li><strong>Oito perguntas</strong>: quatro sobre pizza napolitana, duas da cozinha italiana e duas de doces e café.</li>
       <li>Escolha uma alternativa e toque em <strong>Confirmar resposta</strong>. Depois você vê a correta e uma explicação curta. Cada acerto vale 100 pontos. Sem cronômetro.</li>
       <li>A cada pergunta concluída, certa ou não, a pizza avança uma etapa: massa, abertura, molho, mozzarella, manjericão, pala, forno e finalização.</li>

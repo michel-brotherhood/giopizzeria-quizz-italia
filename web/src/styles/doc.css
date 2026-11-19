@@ -1,0 +1,15 @@
+/* Páginas de texto (Política de Privacidade) com a mesma identidade do quiz. */
+.doc-top { max-width: 46rem; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 20px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.doc-home img { height: 64px; width: auto; display: block; }
+.doc-top a { color: var(--gio-cream); font-weight: 600; }
+.doc { max-width: 46rem; margin: 0 auto; padding: 16px 20px 24px; }
+.doc h1 { font-size: clamp(1.9rem, 6vw, 2.6rem); line-height: 1.1; margin: 12px 0 6px; }
+.doc-meta { color: var(--gio-muted); margin: 0 0 24px; padding-bottom: 12px; background: linear-gradient(var(--gio-red), var(--gio-red)) left bottom / 64px 3px no-repeat; }
+.doc h2 { font-size: 1.25rem; margin: 28px 0 8px; }
+.doc p, .doc li { color: var(--gio-muted); line-height: 1.65; }
+.doc strong { color: var(--gio-cream); }
+.doc ul { padding-left: 20px; }
+.doc li { margin-bottom: 6px; }
+.doc a { color: var(--gio-cream); }
+.doc-foot { max-width: 46rem; margin: 0 auto; padding: 16px 20px calc(28px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(243, 232, 207, 0.1); font-size: 0.85rem; color: var(--gio-muted); }
+.doc-foot p { margin: 0; }
