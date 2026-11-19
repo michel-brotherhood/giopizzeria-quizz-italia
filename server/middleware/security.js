@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { config } from '../config.js';
 import { err } from '../errors.js';
 import { safeEqual } from '../services/crypto.js';
@@ -67,10 +67,14 @@ function limiter(opts) {
   });
 }
 
+// Por operador autenticado; sem sessão, cai para o IP agrupado em /56 no IPv6
+// (evita contornar o limite trocando o endereço dentro do mesmo bloco).
+const staffKey = (req) => (req.staff?.id ? `op:${req.staff.id}` : `ip:${ipKeyGenerator(req.ip)}`);
+
 export const limits = {
   login: () => limiter({ windowMs: 15 * 60_000, limit: 10, skipSuccessfulRequests: true }),
   exchange: () => limiter({ windowMs: 60_000, limit: 20 }),
   player: () => limiter({ windowMs: 60_000, limit: 120 }),
-  lookup: () => limiter({ windowMs: 60_000, limit: 40, keyGenerator: (req) => `op:${req.staff?.id ?? req.ip}` }),
-  staff: () => limiter({ windowMs: 60_000, limit: 120, keyGenerator: (req) => `op:${req.staff?.id ?? req.ip}` }),
+  lookup: () => limiter({ windowMs: 60_000, limit: 40, keyGenerator: staffKey }),
+  staff: () => limiter({ windowMs: 60_000, limit: 120, keyGenerator: staffKey }),
 };
