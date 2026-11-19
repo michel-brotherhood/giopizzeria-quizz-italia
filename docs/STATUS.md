@@ -101,7 +101,8 @@ Publicado com autorização do usuário em **https://quizz.giopizzeria.com.br** 
 - Deploy: predeploy `migrations ok`; healthchecks `api-health` e porta: ok.
 - Corrigido no 1º deploy: aviso `ERR_ERL_KEY_GEN_IPV6` do express-rate-limit (chave por IP sem agrupar IPv6) → `ipKeyGenerator`. Lint ok, unit 28/28, integração 37/37 após a correção.
 - Verificado de fora: `/api/health` → `{"ok":true,"env":"production"}`; `/api/campaign/current` → modo demo, sem campanha; POST com Origin alheia → `CSRF_FAILED`; login inválido → `INVALID_CREDENTIALS`; CSP/no-referrer/HSTS presentes. Demo completa (8 perguntas → resultado) em Chromium contra a produção: cena 3D com 31.136 triângulos/86 draw calls; únicos erros de console: 404 da fonte (ausente por licença) e 401 esperado de sessão inexistente.
-- **Pendente:** criar o(s) login(s) da equipe (senha digitada pelo responsável, ver `docs/OPERACAO.md`), testar backup/restauração e ensaio com a equipe. Nenhuma campanha (nem de teste) existe em produção.
+- Login de gestor `andre` (manager) criado a pedido do usuário. A senha escolhida tem menos de 10 caracteres; a regra do script `staff:create` (mín. 10) **não** foi alterada — o registro foi inserido direto via `docker exec` no container `gio-quiz.web.1`. Recomendado trocar por senha mais longa antes de campanha real. Login verificado em produção.
+- **Pendente:** testar backup/restauração e ensaio com a equipe. Nenhuma campanha (nem de teste) existe em produção.
 
 ## Limitações conhecidas
 - Se o cliente perder o código **e** a credencial ficar ilegível (troca de `SESSION_SECRET`), a equipe não tem busca por conta para entregar; definir procedimento antes da campanha real.
