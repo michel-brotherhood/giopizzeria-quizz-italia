@@ -7,18 +7,24 @@ function lum(hex) {
 }
 const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
 
-// [texto, fundo, uso, mínimo]
+// [texto, fundo, uso, mínimo] — paleta da direção visual (tokens/gio.css). Bordas e marcadores: 3:1.
 const PAIRS = [
-  ['041e42', 'f7efdf', 'texto azul no papel', 4.5],
-  ['041e42', 'fffaf0', 'alternativas', 4.5],
-  ['fffaf0', 'c0322a', 'botão primário (texto creme no vermelho profundo)', 4.5],
-  ['c0322a', 'f7efdf', 'eyebrow/categoria vermelho no papel', 4.5],
-  ['2b6528', 'eef5ea', 'marca "Correta"', 4.5],
-  ['c0322a', 'fbecea', 'marca "Sua resposta"', 4.5],
-  ['f4e9d5', '041e42', 'letra das alternativas / cabeçalho do voucher', 4.5],
-  ['f4e9d5', '2a1a13', 'barra superior', 4.5],
-  ['ffffff', 'c0322a', 'faixa TESTE', 4.5],
-  ['5b6b80', 'f7efdf', 'texto secundário (azul 72% ≈ #4a5a70 sobre papel)', 4.5],
+  ['f3e8cf', '0b0e1d', 'texto creme no fundo navy', 4.5],
+  ['f3e8cf', '121624', 'texto creme no painel', 4.5],
+  ['c7bead', '121624', 'texto secundário no painel', 4.5],
+  ['c7bead', '0b0e1d', 'texto secundário no fundo', 4.5],
+  ['f3e8cf', 'c4281b', 'botão primário (creme sobre vermelho de ação)', 4.5],
+  ['f3e8cf', 'a82216', 'botão primário em hover', 4.5],
+  ['c7bead', '3a2f33', 'botão desabilitado', 4.5],
+  ['88c89b', '121624', 'marca "Correta" após confirmar', 4.5],
+  ['f07a6e', '121624', 'marca "Sua resposta" (erro)', 4.5],
+  ['0b0e1d', '88c89b', 'letra/ícone sobre verde', 4.5],
+  ['0b0e1d', 'f07a6e', 'letra/ícone sobre vermelho claro', 4.5],
+  ['0b0e1d', 'f3e8cf', 'selos e voucher (navy sobre creme)', 4.5],
+  ['ffe09a', '121624', 'anel de foco', 3],
+  ['d92e20', '121624', 'borda da seleção e marcadores (não texto)', 3],
+  ['756f66', '121624', 'borda das alternativas (não texto)', 3],
+  ['ffffff', 'c4281b', 'faixa TESTE', 4.5],
 ];
 
 describe('contraste AA', () => {
@@ -27,7 +33,7 @@ describe('contraste AA', () => {
       expect(ratio(fg, bg)).toBeGreaterThanOrEqual(min);
     });
   }
-  it('o vermelho 179C original (#E03C31) NÃO é usado para texto pequeno sobre creme (reprovaria)', () => {
-    expect(ratio('e03c31', 'f4e9d5')).toBeLessThan(4.5);
+  it('creme sobre o #D92E20 da direção reprovaria em texto normal (por isso o botão usa #C4281B)', () => {
+    expect(ratio('f3e8cf', 'd92e20')).toBeLessThan(4.5);
   });
 });

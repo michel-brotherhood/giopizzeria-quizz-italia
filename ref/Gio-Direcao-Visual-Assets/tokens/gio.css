@@ -1,0 +1,29 @@
+/* Ponto de partida visual. Integrar à arquitetura existente; não importar às cegas. */
+:root {
+  --gio-bg: #0b0e1d;
+  --gio-panel: #121624;
+  --gio-cream: #f3e8cf;
+  --gio-muted: #c7bead;
+  --gio-red: #d92e20;
+  --gio-red-hover: #bb251a;
+  --gio-border: #756f66;
+  --gio-success: #88c89b;
+  --gio-focus: #ffe09a;
+  --gio-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gio-radius: 14px;
+  --gio-control-min: 48px;
+  --gio-space-1: 4px;
+  --gio-space-2: 8px;
+  --gio-space-3: 12px;
+  --gio-space-4: 16px;
+  --gio-space-5: 24px;
+  --gio-space-6: 32px;
+  --gio-space-7: 48px;
+  --gio-layout-max: 1440px;
+  --gio-transition: 180ms ease;
+}
+/* Use creme em labels sobre vermelho; medir contraste de todos os estados finais. */
+.gio-focus:focus-visible { outline: 3px solid var(--gio-focus); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  :root { --gio-transition: 0ms; }
+}

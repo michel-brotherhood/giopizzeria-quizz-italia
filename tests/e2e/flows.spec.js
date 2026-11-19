@@ -4,7 +4,7 @@ import { db, createInvite, answerCurrent, settle, STAFF } from './helpers.js';
 test.describe('demonstração', () => {
   test('partida completa: 8 perguntas, feedback, pontuação e nenhum brinde', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /demonstração|descobrir/i }).click();
+    await page.getByRole('button', { name: /começar/i }).click();
     let correct = 0;
     for (let i = 1; i <= 8; i++) {
       await expect(page.locator('#q-count')).toHaveText(`Pergunta ${i} de 8`);
@@ -17,7 +17,7 @@ test.describe('demonstração', () => {
     await expect(page.locator('#r-score')).toHaveText(String(correct));
     await expect(page.locator('.demo-note')).toContainText('nenhum brinde');
     await expect(page.locator('.voucher')).toHaveCount(0);
-    expect(await page.evaluate(() => window.__gioDebug.stage())).toBe(9);
+    expect(await page.evaluate(() => window.__gioDebug.stage())).toBe(8);
   });
 
   test('storage corrompido não quebra a abertura', async ({ page }) => {
@@ -28,17 +28,45 @@ test.describe('demonstração', () => {
     await expect(page.locator('#q-count')).toHaveText('Pergunta 1 de 8');
   });
 
-  test('WebGL indisponível: modo leve automático e jogo completo', async ({ page }) => {
+  test('WebGL indisponível: ilustração automática e jogo completo (sem botão de modo leve)', async ({ page }) => {
     await page.addInitScript(() => {
       const orig = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/.test(type) ? null : orig.call(this, type, ...a); };
     });
     await page.goto('/');
-    await expect(page.locator('.light-scene')).toBeVisible();
-    await expect(page.locator('#light-toggle')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#app')).toHaveAttribute('data-render', 'image');
+    await expect(page.locator('#stage-poster')).toBeVisible();
+    await expect(page.locator('#light-toggle')).toHaveCount(0);
     await page.locator('#btn-start').click();
+    await expect(page.locator('#stage-step')).toContainText('Etapa 1 · Massa');
     await answerCurrent(page);
-    await expect(page.locator('.light-scene.s1')).toHaveCount(1);
+    await expect(page.locator('#stage-step')).toContainText('Etapa 2 · Abertura');
+  });
+
+  test('seleção não revela a correta; confirmar envia uma única resposta', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#btn-start').click();
+    await expect(page.locator('#btn-confirm')).toBeDisabled();
+    await page.locator('.opt').nth(1).click();
+    await page.locator('.opt').nth(0).click(); // troca de ideia antes de confirmar
+    await expect(page.locator('.opt.selected')).toHaveCount(1);
+    await expect(page.locator('.opt').nth(0)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.opt.correct, .opt.wrong')).toHaveCount(0);
+    await expect(page.locator('#feedback')).toBeHidden();
+    await expect(page.locator('#score-line')).toHaveText('Pontos: 0');
+    await page.locator('#btn-confirm').dblclick();
+    await expect(page.locator('#feedback')).toBeVisible();
+    await expect(page.locator('#fb-icon')).not.toBeEmpty();
+    await expect(page.locator('.opt.correct')).toHaveCount(1);
+    await expect(page.locator('#confirm-row')).toBeHidden();
+    // progresso: 1 concluída, nenhuma "atual" durante o retorno; etapa 2 só depois de avançar
+    await expect(page.locator('.progress li.done')).toHaveCount(1);
+    await expect(page.locator('.progress li.now')).toHaveCount(0);
+    await page.locator('#btn-next').click();
+    await expect(page.locator('#q-step')).toHaveText('Etapa 2 · Abertura');
+    await expect(page.locator('.progress li.now .lbl')).toHaveText('Abertura');
+    const st = JSON.parse(await page.evaluate(() => sessionStorage.getItem('gio.demo.v1')));
+    expect(st.answers.length).toBe(1);
   });
 
   test('teclado: começar, responder e avançar sem mouse', async ({ page }) => {
@@ -48,6 +76,10 @@ test.describe('demonstração', () => {
     await expect(page.locator('#q-text')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.locator('.opt').first()).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.opt').first()).toHaveAttribute('aria-pressed', 'true');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+    await expect(page.locator('#btn-confirm')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('#fb-title')).toBeFocused();
     await page.keyboard.press('Tab');
@@ -120,6 +152,7 @@ test.describe('campanha de teste autorizada', () => {
       return route.continue();
     });
     await page.locator('.opt').nth(1).click();
+    await page.locator('#btn-confirm').click();
     await expect(page.locator('#netbox')).toContainText('Sem conexão');
     await expect(page.locator('#feedback')).toBeHidden();
     await expect(page.locator('.opt.pending')).toHaveCount(1);
@@ -178,8 +211,10 @@ test.describe('campanha de teste autorizada', () => {
     expect({ n, reserved }).toEqual({ n: 1, reserved: 1 });
     // responder em A e tentar outra alternativa em B: B volta ao estado canônico (resposta de A)
     await a.locator('.opt').first().click();
+    await a.locator('#btn-confirm').click();
     await expect(a.locator('#feedback')).toBeVisible();
     await b.locator('.opt').last().click();
+    await b.locator('#btn-confirm').click();
     await expect(b.locator('#q-count')).toHaveText('Pergunta 2 de 8');
   });
 

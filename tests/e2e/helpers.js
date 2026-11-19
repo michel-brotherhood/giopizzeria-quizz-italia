@@ -30,6 +30,9 @@ export async function answerCurrent(page, { correctFrom } = {}) {
     target = page.locator(`.opt[data-option="${q.correctOptionId}"]`);
   }
   await target.click();
+  // seleção não revela nada; a resposta só vai ao confirmar
+  await expect(target).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#btn-confirm').click();
   await expect(page.locator('#feedback')).toBeVisible();
 }
 

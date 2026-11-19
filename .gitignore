@@ -18,3 +18,5 @@ materiais/**/Thumbs.db
 # Gere o subset localmente (ver docs/ASSETS.md); sem ele o CSS usa fontes de fallback.
 materiais/Marca/Fontes/
 web/public/fonts/*.woff2
+# Pacote de direção visual: masters ampliados por interpolação (pesados, não usados pelo app)
+ref/**/alta/

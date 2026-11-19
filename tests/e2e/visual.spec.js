@@ -44,6 +44,8 @@ for (const [w, h] of VIEWPORTS) {
         expect(clipped).toBe(false);
       }
       await page.locator('.opt').nth(2).click();
+      await page.screenshot({ path: `${OUT}/${w}x${h}-02b-selecionada.png`, fullPage: true });
+      await page.locator('#btn-confirm').click();
       await expect(page.locator('#feedback')).toBeVisible();
       await page.waitForTimeout(1200);
       await settle(page);
@@ -61,6 +63,7 @@ for (const [w, h] of VIEWPORTS) {
 
 for (const [w, h] of [[390, 844], [1440, 900], [844, 390]]) {
   test(`voucher de teste e painel da equipe ${w}x${h}`, async ({ browser, request }) => {
+    test.setTimeout(240_000); // partida completa + painel, com WebGL por software
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await ctx.newPage();
     const inv = await createInvite(request, `VIS-${w}`);
@@ -123,16 +126,57 @@ test('movimento reduzido: troca direta de etapa', async ({ browser }) => {
   await ctx.close();
 });
 
-test('modo leve manual mantém identidade e jogo', async ({ page }) => {
+test('sem WebGL: ilustração automática mantém identidade e jogo', async ({ page }) => {
+  await page.addInitScript(() => {
+    const orig = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/.test(type) ? null : orig.call(this, type, ...a); };
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.locator('#light-toggle').click();
-  await expect(page.locator('.light-scene')).toBeVisible();
-  await page.screenshot({ path: `${OUT}/modo-leve-01-abertura.png` });
+  await expect(page.locator('#app')).toHaveAttribute('data-render', 'image');
+  await page.screenshot({ path: `${OUT}/sem-webgl-01-abertura.png` });
   await page.locator('#btn-start').click();
-  for (let i = 0; i < 3; i++) { await answerCurrent(page); await page.locator('#btn-next').click(); }
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: `${OUT}/modo-leve-02-etapa3.png` });
+  await expect(page.locator('.stage-pizza')).toBeHidden();
+  for (let i = 0; i < 4; i++) { await answerCurrent(page); await page.locator('#btn-next').click(); }
+  // a pizza ilustrada aparece só na etapa que ela representa (molho, mozzarella, manjericão e azeite)
+  await expect(page.locator('#stage-step')).toContainText('Etapa 5 · Manjericão');
+  await expect(page.locator('.stage-pizza')).toBeVisible();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${OUT}/sem-webgl-02-etapa5.png` });
+  await answerCurrent(page); await page.locator('#btn-next').click();
+  await expect(page.locator('.stage-pizza')).toBeHidden();
+});
+
+test('falha ao carregar imagens do cenário não bloqueia o jogo', async ({ page }) => {
+  await page.route('**/scene/*.webp', (route) => route.abort());
+  await page.addInitScript(() => {
+    const orig = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/.test(type) ? null : orig.call(this, type, ...a); };
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('#btn-start').click();
+  await answerCurrent(page);
+  await expect(page.locator('#stage-poster')).toBeHidden();
+  await expect(page.locator('#stage-step')).toContainText('Abertura');
+  await page.screenshot({ path: `${OUT}/sem-imagens-feedback.png` });
+});
+
+test('320 px de largura: sem rolagem horizontal, alternativas e confirmação acessíveis', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 320, height: 640 } });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await noHorizontalScroll(page);
+  await page.locator('#btn-start').click();
+  await noHorizontalScroll(page);
+  for (const o of await page.locator('.opt').all()) expect((await o.boundingBox()).height).toBeGreaterThanOrEqual(48);
+  await page.locator('.opt').first().click();
+  await page.locator('#btn-confirm').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${OUT}/320x640-pergunta.png`, fullPage: true });
+  await page.locator('#btn-confirm').click();
+  await expect(page.locator('#feedback')).toBeVisible();
+  await noHorizontalScroll(page);
+  await ctx.close();
 });
 
 test('métricas da cena 3D', async ({ page }) => {
@@ -143,5 +187,8 @@ test('métricas da cena 3D', async ({ page }) => {
   fs.writeFileSync(`${OUT}/scene-metrics-390.json`, JSON.stringify(info, null, 2));
   expect(info.triangles).toBeLessThanOrEqual(60000);
   expect(info.calls).toBeLessThanOrEqual(90);
+  // a cena 3D é a padrão: não há botão para trocar de modo
+  await expect(page.locator('#light-toggle')).toHaveCount(0);
+  await expect(page.locator('#app')).toHaveAttribute('data-render', '3d');
   expect(info.dpr).toBeLessThanOrEqual(1.5);
 });

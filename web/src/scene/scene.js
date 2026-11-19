@@ -1,47 +1,53 @@
 // Cena 3D principal. Recebe eventos (setStage, celebrate) — não decide estado do jogo nem do brinde.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createKitchen, OVEN } from './kitchen.js';
+import { createKitchen, OVEN, BOARD_TOP } from './kitchen.js';
 import { createPizza } from './pizza.js';
 
-const P0 = { x: 0, y: 0, z: 0.4 };
+const P0 = { x: 0, y: BOARD_TOP, z: 0.4 }; // pizza apoiada na tábua
+const ON_PEEL = BOARD_TOP + 0.055;
 const BLADE_OFFSET = -0.55; // centro da lâmina no eixo local z da pala
 const INSIDE_Z = OVEN.z + 0.9;             // centro da pizza dentro do forno
 const MOUTH_Z = OVEN.z + OVEN.r + 1.7;       // diante da boca, do lado de fora
-const PEEL_REST = { peelX: 4.6, peelY: 0, peelZ: 1.2, peelRot: Math.PI / 2 };
+const PEEL_REST = { peelX: 7.2, peelY: 0, peelZ: 0.6, peelRot: Math.PI / 2 }; // fora do quadro, à direita
 
+// Câmeras por etapa, sempre em três quartos elevados e sem giro: abertura mostra a tábua com o forno
+// aceso ao fundo à direita; preparo aproxima da pizza; a etapa do forno enquadra a boca.
 const CAMS = {
-  0: { cx: 3.3, cy: 4.8, cz: 7.6, tx: -1.0, ty: 0.7, tz: -2.3 },
-  1: { cx: 2.3, cy: 5.7, cz: 6.3, tx: -0.3, ty: 0.25, tz: -0.4 },
-  6: { cx: 3.1, cy: 5.3, cz: 7.0, tx: 0.2, ty: 0.3, tz: -0.4 },
-  7: { cx: 1.4, cy: 4.4, cz: 2.4, tx: -3.3, ty: 1.0, tz: -5.6 },
-  8: { cx: 2.4, cy: 5.5, cz: 6.2, tx: 0.0, ty: 0.25, tz: -0.1 },
-  9: { cx: 2.2, cy: 5.6, cz: 5.4, tx: 0.0, ty: 0.1, tz: 0.35 },
+  0: { cx: -1.3, cy: 4.3, cz: 5.6, tx: 0.7, ty: 0.25, tz: -1.2 },
+  1: { cx: -1.0, cy: 4.9, cz: 5.2, tx: 0.2, ty: 0.1, tz: -0.2 },
+  5: { cx: -1.0, cy: 4.8, cz: 5.8, tx: 0.6, ty: 0.2, tz: -0.6 },
+  6: { cx: 1.4, cy: 2.0, cz: 1.6, tx: 3.9, ty: 0.55, tz: -6.6 },
+  7: { cx: -1.0, cy: 4.7, cz: 5.2, tx: 0.2, ty: 0.15, tz: -0.1 },
+  8: { cx: -1.0, cy: 4.6, cz: 5.0, tx: 0.2, ty: 0.1, tz: 0.1 },
 };
-const camFor = (s) => CAMS[s] ?? CAMS[s >= 1 && s <= 5 ? 1 : 0];
+const camFor = (s) => CAMS[s] ?? CAMS[s >= 1 && s <= 4 ? 1 : 0];
 
-const ING = ['disc', 'sauce', 'mozz', 'basil', 'oil'];
+// Etapas 0..8: 0 massa, 1 aberta, 2 molho, 3 mozzarella, 4 manjericão + azeite, 5 pala, 6 forno,
+// 7 saiu do forno, 8 pronta. Cada pergunta concluída avança uma etapa.
+const ING_AT = { disc: 1, sauce: 2, mozz: 3, basil: 4, oil: 4 };
 
-/** Estado final (sem animação) de cada etapa 0..9. */
+/** Estado final (sem animação) de cada etapa 0..8. */
 function finalState(stage) {
   const s = {
     ball: 1, disc: 0, sauce: 0, mozz: 0, basil: 0, oil: 0, baked: 0,
     px: P0.x, py: P0.y, pz: P0.z, ...PEEL_REST, heat: 0.35, carry: 0, highlight: 0,
     ...camFor(stage),
   };
-  ING.forEach((k, i) => { if (stage >= i + 1) s[k] = 1; });
+  for (const [k, at] of Object.entries(ING_AT)) if (stage >= at) s[k] = 1;
   if (stage >= 1) s.ball = 0;
-  if (stage === 6) Object.assign(s, { py: 0.055, peelX: P0.x - BLADE_OFFSET, peelZ: P0.z, carry: 1 });
-  if (stage === 7) {
+  if (stage === 5) Object.assign(s, { py: ON_PEEL, peelX: P0.x - BLADE_OFFSET, peelY: BOARD_TOP, peelZ: P0.z, carry: 1 });
+  if (stage === 6) {
     Object.assign(s, { px: OVEN.x, py: OVEN.y + 0.06 + 0.055, pz: INSIDE_Z, peelX: OVEN.x, peelY: OVEN.y + 0.06, peelZ: INSIDE_Z - BLADE_OFFSET + 6.4, peelRot: 0, heat: 1 });
   }
-  if (stage >= 8) {
-    const rot = 0.6;
+  if (stage === 7) {
+    const rot = -0.6;
     Object.assign(s, {
-      baked: 1, px: P0.x, py: 0.055, pz: P0.z, peelRot: rot,
-      peelX: P0.x - Math.sin(rot) * BLADE_OFFSET, peelY: 0, peelZ: P0.z - Math.cos(rot) * BLADE_OFFSET, carry: 1, heat: 0.5,
+      baked: 1, px: P0.x, py: ON_PEEL, pz: P0.z, peelRot: rot,
+      peelX: P0.x - Math.sin(rot) * BLADE_OFFSET, peelY: BOARD_TOP, peelZ: P0.z - Math.cos(rot) * BLADE_OFFSET, carry: 1, heat: 0.5,
     });
   }
+  if (stage >= 8) Object.assign(s, { baked: 1, heat: 0.45 }); // pronta: de volta à tábua, pala descansando
   return s;
 }
 
@@ -49,33 +55,33 @@ function finalState(stage) {
 function segmentsFor(stage) {
   const f = finalState(stage);
   const cam = camFor(stage);
+  if (stage === 5) {
+    return [
+      { dur: 350, to: { ...cam, py: ON_PEEL } },
+      { dur: 550, to: { peelX: f.peelX, peelY: f.peelY, peelZ: f.peelZ, peelRot: f.peelRot } },
+      { dur: 1, to: {}, carry: 1 },
+    ];
+  }
   if (stage === 6) {
     return [
-      { dur: 500, to: { ...cam, py: 0.055 } },
-      { dur: 750, to: { peelX: f.peelX, peelZ: f.peelZ, peelRot: f.peelRot } },
-      { dur: 1, to: {}, carry: 1 },
+      { dur: 700, carry: 1, to: { peelRot: 0, peelX: OVEN.x, peelY: OVEN.y + 0.06, peelZ: MOUTH_Z - BLADE_OFFSET, ...cam } },
+      { dur: 550, to: { peelZ: INSIDE_Z - BLADE_OFFSET, heat: 0.8 } },
+      { dur: 1, carry: 0, to: {} },
+      { dur: 450, to: { peelZ: f.peelZ, heat: 1 } },
     ];
   }
   if (stage === 7) {
     return [
-      { dur: 850, carry: 1, to: { peelRot: 0, peelX: OVEN.x, peelY: OVEN.y + 0.06, peelZ: MOUTH_Z - BLADE_OFFSET, ...cam } },
-      { dur: 750, to: { peelZ: INSIDE_Z - BLADE_OFFSET, heat: 0.8 } },
-      { dur: 1, carry: 0, to: {} },
-      { dur: 650, to: { peelZ: f.peelZ, heat: 1 } },
-    ];
-  }
-  if (stage === 8) {
-    return [
       { dur: 300, to: { baked: 1 } },
-      { dur: 550, to: { peelZ: INSIDE_Z - BLADE_OFFSET } },
+      { dur: 450, to: { peelZ: INSIDE_Z - BLADE_OFFSET } },
       { dur: 1, carry: 1, to: {} },
-      { dur: 700, to: { peelZ: MOUTH_Z - BLADE_OFFSET, heat: 0.7 } },
-      { dur: 850, to: { peelX: f.peelX, peelY: 0, peelZ: f.peelZ, peelRot: f.peelRot, heat: f.heat, ...cam } },
+      { dur: 550, to: { peelZ: MOUTH_Z - BLADE_OFFSET, heat: 0.7 } },
+      { dur: 700, to: { peelX: f.peelX, peelY: f.peelY, peelZ: f.peelZ, peelRot: f.peelRot, heat: f.heat, ...cam } },
     ];
   }
   const to = {};
   for (const k of Object.keys(f)) if (k !== 'carry') to[k] = f[k];
-  return [{ dur: stage === 9 ? 900 : 800, to, carry: f.carry }];
+  return [{ dur: 650, to, carry: f.carry }];
 }
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -91,41 +97,54 @@ export async function createScene(container, { reducedMotion = false, quality = 
     throw new Error(`WebGL indisponível: ${e.message}`);
   }
   if (!renderer.getContext()) throw new Error('WebGL indisponível');
+  // WebGL por software (SwiftShader/llvmpipe): menos pixels e menos quadros quando nada se move.
+  const gl = renderer.getContext();
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpuName = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : '';
+  const software = /swiftshader|llvmpipe|software/i.test(gpuName);
+  if (software) quality = 'low';
+  const idleMs = software ? 250 : 40; // fogo a ~25 fps em GPU real
   container.appendChild(canvas);
 
   const maxDpr = quality === 'high' ? 1.5 : 1;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.92;
-  renderer.shadowMap.enabled = true;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = !software;
   renderer.shadowMap.type = THREE.PCFShadowMap;
 
+  const BG = 0x0b0e1d;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x2a1a13);
-  scene.fog = new THREE.Fog(0x2a1a13, 18, 44);
+  scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.Fog(BG, 16, 36);
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.35;
+  scene.environmentIntensity = 0.22;
 
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 90);
 
-  // Luz: forno quente como principal, preenchimento neutro para a comida, sombras de contato leves.
-  scene.add(new THREE.HemisphereLight(0xfff3e4, 0x5a3b2a, 0.85));
-  const key = new THREE.DirectionalLight(0xfff0dc, 1.75);
-  key.position.set(4.5, 9, 5.5);
+  // Luz principal suave acima à esquerda (sombras de contato sob pizza, tábua e tigelas),
+  // luz quente do forno ao fundo à direita e um preenchimento âmbar baixo.
+  scene.add(new THREE.HemisphereLight(0xffe9cc, 0x2a1a10, 0.5));
+  const key = new THREE.SpotLight(0xfff0dc, 150, 26, 0.7, 0.9, 1.5);
+  key.position.set(-4.5, 9, 4);
+  key.target.position.set(0.2, 0, -0.2);
   key.castShadow = true;
   key.shadow.mapSize.set(quality === 'high' ? 1024 : 512, quality === 'high' ? 1024 : 512);
-  Object.assign(key.shadow.camera, { left: -9, right: 7, top: 7, bottom: -11, near: 1, far: 34 });
-  key.shadow.bias = -0.0004;
+  key.shadow.bias = -0.0003;
   key.shadow.normalBias = 0.02;
-  key.shadow.radius = 4;
-  scene.add(key);
-  const ovenLight = new THREE.PointLight(0xff7a2e, 30, 16, 2);
-  ovenLight.position.set(OVEN.x, OVEN.y + 1.0, OVEN.z + OVEN.r + 0.7);
+  key.shadow.radius = 6;
+  key.shadow.camera.near = 3; key.shadow.camera.far = 20;
+  scene.add(key, key.target);
+  const fill = new THREE.DirectionalLight(0xffb070, 0.45);
+  fill.position.set(6, 3, 6);
+  scene.add(fill);
+  const ovenLight = new THREE.PointLight(0xff7a2e, 30, 20, 1.6);
+  ovenLight.position.set(OVEN.x, OVEN.y + 1.0, OVEN.z + OVEN.r + 0.6);
   scene.add(ovenLight);
-  const innerLight = new THREE.PointLight(0xff8a3a, 10, 6, 2);
-  innerLight.position.set(OVEN.x, OVEN.y + 1.2, OVEN.z + 1.2);
+  const innerLight = new THREE.PointLight(0xff8a3a, 16, 7, 1.6);
+  innerLight.position.set(OVEN.x + 0.6, OVEN.y + 2.0, OVEN.z + 0.2);
   scene.add(innerLight);
 
   const kitchen = createKitchen({ quality });
@@ -155,10 +174,12 @@ export async function createScene(container, { reducedMotion = false, quality = 
       state.py = state.peelY + 0.055;
     }
     pizza.group.position.set(state.px, state.py, state.pz);
+    if (reducedMotion) { kitchen.fire.update(1.3, state.heat); pizza.tick(1.3); }
     const h = state.heat;
-    ovenLight.intensity = (14 + h * 34) * flick;
-    innerLight.intensity = 4 + h * 14;
-    kitchen.glowMat.color.setScalar(0.55 + h * 0.6);
+    ovenLight.intensity = (16 + h * 30) * flick;
+    innerLight.intensity = (10 + h * 18) * flick;
+    kitchen.halo.opacity = (0.16 + h * 0.22) * flick;
+    kitchen.arch.emissiveIntensity = 0.08 + h * 0.18;
     let cx = state.cx, cz = state.cz;
     if (orbit) {
       const a = orbit * 0.00012;
@@ -171,14 +192,28 @@ export async function createScene(container, { reducedMotion = false, quality = 
     camera.lookAt(lookAt);
   }
 
+  // Janela de foco: a parte do canvas que não fica sob o painel de texto. A câmera desloca o
+  // centro óptico para essa janela (setViewOffset) e ajusta o campo de visão ao tamanho dela.
+  let focus = null;
+  function applyFocus(w, h) {
+    const f = focus && focus.w > 40 && focus.h > 40 ? focus : { x: 0, y: 0, w, h };
+    const aVis = f.w / f.h;
+    const baseHalf = Math.tan(THREE.MathUtils.degToRad(19));
+    let tanVis = aVis < 1 ? baseHalf / Math.pow(aVis, 0.8) : aVis > 1.9 ? baseHalf * 0.9 : baseHalf;
+    const tanFull = tanVis * (h / f.h);
+    camera.fov = Math.min(80, THREE.MathUtils.radToDeg(2 * Math.atan(tanFull)));
+    const offX = w / 2 - (f.x + f.w / 2);
+    const offY = h / 2 - (f.y + f.h / 2);
+    camera.setViewOffset(w, h, offX, offY, w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
   function resize() {
     const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
     renderer.setSize(w, h, false);
-    const aspect = w / h;
-    camera.aspect = aspect;
-    // Em telas estreitas, abre o campo de visão para manter a pizza e o forno no quadro.
-    camera.fov = aspect < 1 ? Math.min(52, 34 / Math.pow(aspect, 0.75)) : aspect > 1.9 ? 30 : 34;
-    camera.updateProjectionMatrix();
+    applyFocus(w, h);
+    kitchen.fire.setPointScale(70 * renderer.getPixelRatio() * (h / 800));
     render(true);
   }
 
@@ -218,22 +253,26 @@ export async function createScene(container, { reducedMotion = false, quality = 
     if (highlightUntil) {
       const left = highlightUntil - now;
       const amt = left > 0 ? Math.sin(Math.min(1, 1 - left / 900) * Math.PI) : 0;
-      pizza.highlight(Math.min(stage, 5), amt);
+      pizza.highlight(Math.min(stage, 4), amt);
       if (left <= 0) highlightUntil = 0;
       active = true;
     }
-    if (stage === 9 && !reducedMotion) { orbit += 16; active = true; }
-    // Chama do forno: oscilação sutil, a ~15 fps quando nada mais anima (economia de bateria).
+    // Fogo e vapor animam sempre, em taxa reduzida quando nada mais se move (economia de bateria).
     if (!reducedMotion) {
-      flick = 1 + Math.sin(now * 0.011) * 0.05 + Math.sin(now * 0.031) * 0.03;
-      if (active || now - lastRender > 66) render(true);
+      const t = now / 1000;
+      flick = 1 + Math.sin(now * 0.011) * 0.06 + Math.sin(now * 0.029) * 0.04 + Math.sin(now * 0.053) * 0.02;
+      if (active || now - lastRender > idleMs) {
+        kitchen.fire.update(t, state.heat);
+        pizza.tick(t);
+        render(true);
+      }
     } else if (active) {
       render(true);
     }
   }
 
   function setStage(n, { instant = false } = {}) {
-    n = Math.max(0, Math.min(9, n | 0));
+    n = Math.max(0, Math.min(8, n | 0));
     if (n === stage && !instant) return;
     const forward = n === stage + 1;
     stage = n;
@@ -279,6 +318,8 @@ export async function createScene(container, { reducedMotion = false, quality = 
 
   const api = {
     setStage, celebrate, dispose,
+    /** Retângulo (px do canvas) visível ao lado/acima do painel; a cena se enquadra nele. */
+    setFocus(rect) { focus = rect; resize(); },
     /** Conclui a animação em curso imediatamente (capturas determinísticas em testes). */
     settle() { queue = []; seg = null; state = finalState(stage); render(true); },
     debugState: () => ({ stage, queue: queue.length, seg: Boolean(seg), px: state.px, pz: state.pz, peelZ: state.peelZ, carry: state.carry }),

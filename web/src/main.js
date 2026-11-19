@@ -5,7 +5,6 @@ import bank from '../../content/questions.seed.json';
 import { DemoAdapter, ServerAdapter, store } from './game/adapters.js';
 import { newKey } from './game/api.js';
 import { CATEGORY_LABELS, ROUND_SIZE } from '../../shared/quiz.js';
-import { createLightScene } from './scene/light-scene.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app');
@@ -13,18 +12,21 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fmtTime = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 const fmtDay = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' });
 
+// Etapas culinárias (0..8). A etapa k fica na bancada enquanto se responde a pergunta k+1;
+// a pizza avança uma etapa a cada pergunta concluída, certa ou não.
 const BENCH = [
-  'Na bancada: o panetto descansa sobre a farinha.',
-  'Na bancada: a massa foi aberta à mão.',
-  'Na bancada: o molho de tomate foi espalhado.',
-  'Na bancada: a mozzarella foi distribuída.',
-  'Na bancada: folhas de manjericão.',
-  'Na bancada: um fio de azeite.',
-  'A pala se aproxima da pizza.',
-  'A pizza entrou no forno.',
+  'A massa descansa sobre a farinha.',
+  'A massa foi aberta à mão.',
+  'O molho de tomate foi espalhado.',
+  'A mozzarella foi distribuída.',
+  'Manjericão e um fio de azeite.',
+  'A pala leva a pizza até o forno.',
+  'A pizza está no forno.',
   'A pizza saiu do forno.',
   'Pizza pronta.',
 ];
+// Rótulo de cada um dos 8 marcadores (pergunta k = etapa k-1 na bancada).
+const STEP_LABELS = ['Massa', 'Abertura', 'Molho', 'Mozzarella', 'Manjericão', 'Pala', 'Forno', 'Finalização'];
 
 const server = new ServerAdapter();
 const demo = new DemoAdapter(bank.questions);
@@ -44,9 +46,11 @@ const ctx = {
 };
 
 // ---------------------------------------------------------------- cena
+// Sempre 3D. Sem WebGL, a reserva automática é o cenário em imagem (o mesmo usado como espera),
+// com a etapa escrita; a pizza ilustrada só aparece na etapa que ela representa (molho, mozzarella,
+// manjericão e azeite). Não há botão para trocar de modo.
 let scene = null;
 let sceneStage = 0;
-let lightMode = false;
 
 function setStage(n, opts) {
   sceneStage = n;
@@ -54,41 +58,56 @@ function setStage(n, opts) {
   $('scene-status').textContent = BENCH[n] ?? '';
 }
 
-async function mountScene(light) {
-  scene?.dispose();
-  scene = null;
-  const stage = $('stage');
-  if (light) {
-    scene = createLightScene(stage);
-    scene.setStage(sceneStage);
-    return;
-  }
-  try {
-    const mod = await import('./scene/scene.js');
-    if (lightMode) return; // usuário trocou durante o carregamento
-    const quality = (navigator.deviceMemory && navigator.deviceMemory <= 2) ? 'low' : 'high';
-    scene = await mod.createScene(stage, {
-      reducedMotion, quality,
-      onFail: () => { setLightMode(true, true); },
-    });
-    scene.setStage(sceneStage, { instant: true });
-  } catch (e) {
-    console.warn('[cena] usando modo leve:', e.message);
-    setLightMode(true, true);
-  }
+function createImageFallback(stage) {
+  const caption = $('stage-step');
+  const pizza = el('img', { class: 'stage-pizza', src: '/scene/pizza-mozzarella-720.webp', alt: '', width: 720, height: 720, decoding: 'async', hidden: true });
+  pizza.addEventListener('error', () => pizza.remove());
+  stage.append(pizza);
+  return {
+    setStage(n) {
+      caption.hidden = false;
+      caption.textContent = `${n >= 8 ? 'Pizza pronta' : `Etapa ${Math.min(n + 1, 8)} · ${STEP_LABELS[Math.min(n, 7)]}`}: ${BENCH[n] ?? ''}`;
+      pizza.hidden = n !== 4;
+    },
+    celebrate() {},
+    dispose() { pizza.remove(); caption.hidden = true; },
+  };
 }
 
-function setLightMode(on, automatic = false) {
-  lightMode = on;
-  $('light-toggle').setAttribute('aria-pressed', String(on));
-  $('light-toggle').textContent = on ? (automatic ? 'Modo leve (auto)' : 'Modo leve') : 'Modo leve';
-  if (!automatic) store.setLocal('gio.light', on);
-  mountScene(on);
+function mountFallback() {
+  scene?.dispose?.();
+  const stage = $('stage');
+  stage.querySelector('canvas')?.remove();
+  stage.classList.remove('is-3d');
+  scene = createImageFallback(stage);
+  scene.setStage(sceneStage);
+  app.dataset.render = 'image';
+}
+
+async function mountScene() {
+  const poster = $('stage-poster');
+  poster.addEventListener('error', () => { poster.hidden = true; });
+  if (poster.complete && poster.naturalWidth === 0) poster.hidden = true; // falhou antes do script carregar
+  try {
+    const mod = await import('./scene/scene.js');
+    const quality = (navigator.deviceMemory && navigator.deviceMemory <= 2) ? 'low' : 'high';
+    scene = await mod.createScene($('stage'), { reducedMotion, quality, onFail: mountFallback });
+    scene.setStage(sceneStage, { instant: true });
+    $('stage').classList.add('is-3d');
+    app.dataset.render = '3d';
+  } catch (e) {
+    console.warn('[cena] sem WebGL, usando imagem do cenário:', e.message);
+    mountFallback();
+  }
 }
 
 // ---------------------------------------------------------------- telas
 function show(screen, focusId) {
   app.dataset.screen = screen;
+  const inGame = screen === 'question' || screen === 'completing' || screen === 'result';
+  $('progress-wrap').hidden = !inGame;
+  $('q-count').hidden = screen !== 'question';
+  if (screen === 'completing' || screen === 'result') renderProgress(ROUND_SIZE);
   if (focusId) requestAnimationFrame(() => $(focusId)?.focus({ preventScroll: false }));
 }
 
@@ -138,9 +157,9 @@ function renderWelcome() {
     offer.append(el('h3', {}, 'Brinde da casa'));
     offer.append(el('p', {}, 'Peça à equipe seu acesso para participar com brinde.'));
     offer.append(el('p', { class: 'small' }, 'Sem convite, você pode jogar a demonstração — ela não emite brinde.'));
-    start.textContent = 'Jogar demonstração';
+    start.textContent = 'Começar';
   } else {
-    start.textContent = 'Jogar para descobrir';
+    start.textContent = 'Começar';
   }
   // Com convite, a oferta aparece ANTES do botão (o cliente vê o brinde antes de começar);
   // sem convite, o aviso vem depois, para o CTA ficar visível sem rolagem.
@@ -150,9 +169,16 @@ function renderWelcome() {
   show('welcome');
 }
 
-function renderProgress(answered) {
+/** 8 marcadores = 8 perguntas. `answered` concluídas; a seguinte é a atual (se houver). */
+function renderProgress(answered, showCurrent = true) {
   const ol = $('progress');
-  ol.replaceChildren(...Array.from({ length: ROUND_SIZE }, (_, i) => el('li', { class: i < answered ? 'done' : i === answered ? 'now' : '' })));
+  ol.replaceChildren(...Array.from({ length: ROUND_SIZE }, (_, i) => {
+    const st = i < answered ? 'done' : i === answered && showCurrent ? 'now' : 'todo';
+    return el('li', { class: st, 'aria-current': st === 'now' ? 'step' : null },
+      el('span', { class: 'dot', 'aria-hidden': 'true' }),
+      el('span', { class: 'lbl' }, STEP_LABELS[i]),
+      el('span', { class: 'sr-only' }, st === 'done' ? ' (concluída)' : st === 'now' ? ' (atual)' : ''));
+  }));
 }
 
 function renderQuestion() {
@@ -162,12 +188,14 @@ function renderQuestion() {
   const pos = ctx.feedback ? ctx.feedback.position + 1 : s.answeredCount + 1;
   $('q-count').textContent = `Pergunta ${pos} de ${ROUND_SIZE}`;
   $('q-cat').textContent = CATEGORY_LABELS[q.category] ?? q.category;
-  renderProgress(ctx.feedback ? pos : pos - 1);
+  $('q-step').textContent = `Etapa ${pos} · ${STEP_LABELS[pos - 1]}`;
+  renderProgress(ctx.feedback ? pos : pos - 1, !ctx.feedback);
   $('bench').textContent = BENCH[ctx.feedback ? pos : pos - 1];
+  ctx.selected = null;
   $('q-text').textContent = q.question;
   const opts = $('options');
   opts.replaceChildren(...q.options.map((o, i) => {
-    const b = el('button', { type: 'button', class: 'opt', 'data-option': o.id },
+    const b = el('button', { type: 'button', class: 'opt', 'data-option': o.id, 'aria-pressed': 'false' },
       el('span', { class: 'letter', 'aria-hidden': 'true' }, 'ABCD'[i]),
       el('span', { class: 'txt' }, o.text),
       el('span', { class: 'mark' }));
@@ -177,6 +205,8 @@ function renderQuestion() {
   $('netbox').hidden = true;
   $('score-line').textContent = `Pontos: ${s.score}`;
   void n;
+  $('confirm-row').hidden = Boolean(ctx.feedback);
+  $('btn-confirm').disabled = true;
   if (ctx.feedback) applyFeedback(false); else $('feedback').hidden = true;
   if (ctx.pending && ctx.pending.questionId === q.id) markPending();
 }
@@ -184,8 +214,10 @@ function renderQuestion() {
 function markPending() {
   for (const b of $('options').querySelectorAll('.opt')) {
     b.disabled = true;
-    if (b.dataset.option === ctx.pending.selectedOptionId) { b.classList.add('pending'); b.setAttribute('aria-busy', 'true'); b.querySelector('.mark').textContent = 'Enviando…'; }
+    if (b.dataset.option === ctx.pending.selectedOptionId) { b.classList.add('selected', 'pending'); b.setAttribute('aria-pressed', 'true'); b.setAttribute('aria-busy', 'true'); b.querySelector('.mark').textContent = 'Enviando…'; }
   }
+  const c = $('btn-confirm');
+  c.disabled = true; c.setAttribute('aria-busy', 'true'); c.textContent = 'Enviando…';
 }
 
 function applyFeedback(moveFocus = true) {
@@ -195,18 +227,22 @@ function applyFeedback(moveFocus = true) {
     const id = b.dataset.option;
     b.disabled = true;
     b.removeAttribute('aria-busy');
-    b.classList.remove('pending');
+    b.classList.remove('pending', 'selected');
     const mark = b.querySelector('.mark');
-    if (id === f.correctOptionId) { b.classList.add('correct'); mark.textContent = '✓ Correta'; }
+    if (id === f.correctOptionId) { b.classList.add('correct'); mark.textContent = id === f.selectedOptionId ? '✓ Sua resposta, correta' : '✓ Correta'; }
     else if (id === f.selectedOptionId) { b.classList.add('wrong'); mark.textContent = '✕ Sua resposta'; }
     else { b.classList.add('dim'); mark.textContent = ''; }
   }
+  $('confirm-row').hidden = true;
+  const c = $('btn-confirm');
+  c.removeAttribute('aria-busy'); c.textContent = 'Confirmar resposta';
   const box = $('feedback');
   box.hidden = false;
   box.className = `feedback ${f.correct ? 'ok' : 'no'}`;
-  $('fb-title').textContent = f.correct ? '✓ Boa! Você acertou' : 'Mais um sabor para descobrir';
+  $('fb-icon').textContent = f.correct ? '✓' : '✕';
+  $('fb-title').textContent = f.correct ? 'Você acertou!' : 'Não foi dessa vez';
   const correct = q.options.find((o) => o.id === f.correctOptionId);
-  $('fb-answer').textContent = f.correct ? `Resposta: ${correct?.text}` : `Resposta correta: ${correct?.text}`;
+  $('fb-answer').textContent = f.correct ? correct?.text : `A resposta é: ${correct?.text}`;
   $('fb-expl').textContent = f.explanation;
   $('btn-next').textContent = f.position + 1 >= ROUND_SIZE ? 'Ver minha pizza' : 'Próxima pergunta';
   $('score-line').textContent = `Pontos: ${ctx.state.session.score}`;
@@ -215,9 +251,22 @@ function applyFeedback(moveFocus = true) {
 }
 
 // ---------------------------------------------------------------- partida
-async function choose(optionId) {
-  if (ctx.busy || ctx.feedback) return;
+/** Seleção: só marca a alternativa (sem revelar nada). O envio acontece em "Confirmar resposta". */
+function choose(optionId) {
+  if (ctx.busy || ctx.feedback || ctx.pending) return;
+  ctx.selected = optionId;
+  for (const b of $('options').querySelectorAll('.opt')) {
+    const on = b.dataset.option === optionId;
+    b.classList.toggle('selected', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+  $('btn-confirm').disabled = false;
+}
+
+async function confirmAnswer() {
+  if (ctx.busy || ctx.feedback || ctx.pending || !ctx.selected) return;
   const q = ctx.current;
+  const optionId = ctx.selected;
   ctx.pending = { questionId: q.id, selectedOptionId: optionId, key: newKey() };
   if (ctx.mode === 'server') store.set('gio.pending', ctx.pending);
   markPending();
@@ -238,12 +287,13 @@ async function submitAnswer(attempt = 0) {
     ctx.nextQuestion = r.next ?? null;
     Object.assign(ctx.state.session, { score: r.score, answeredCount: r.answeredCount });
     applyFeedback();
-    renderProgress(r.answeredCount);
+    renderProgress(r.answeredCount, false);
     $('bench').textContent = BENCH[r.answeredCount];
     setStage(r.answeredCount);
-    if (r.correct) scene?.celebrate();
+    if (r.correct) scene?.celebrate?.();
   } catch (e) {
     handleAnswerError(e, attempt);
+    if (!ctx.pending) { const c = $('btn-confirm'); c.removeAttribute('aria-busy'); c.textContent = 'Confirmar resposta'; }
   } finally {
     ctx.busy = false;
   }
@@ -283,7 +333,7 @@ function next() {
   renderQuestion();
   // Um único salto instantâneo para o topo + foco sem rolagem (duas rolagens concorrentes deixavam
   // os botões "andando" por ~1 s em aparelhos lentos).
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  $('quiz-top').scrollIntoView({ block: 'nearest', behavior: 'instant' });
   requestAnimationFrame(() => $('q-text').focus({ preventScroll: true }));
 }
 
@@ -293,7 +343,7 @@ async function finish(attempt = 0) {
   // (o botão não some sob o dedo de quem está tocando).
   if (attempt === 0) { show('completing', 'c-title'); $('c-netbox').hidden = true; }
   else { const p = $('c-netbox').querySelector('p'); if (p) p.textContent = 'Tentando de novo…'; }
-  setStage(9);
+  setStage(8);
   if (ctx.mode === 'demo') {
     const s = await demo.complete();
     ctx.state = s;
@@ -350,7 +400,7 @@ function voucherCard(v) {
 function renderResult() {
   clearInterval(ctx.pollTimer);
   const s = ctx.state.session;
-  setStage(9);
+  setStage(8);
   $('r-score').textContent = String(Math.round(s.score / 100));
   const area = $('voucher-area');
   area.replaceChildren();
@@ -496,20 +546,16 @@ async function boot() {
     history.replaceState(null, '', location.pathname);
   }
 
-  const savedLight = store.getLocal('gio.light');
-  const saveData = navigator.connection?.saveData === true;
-  lightMode = savedLight ?? saveData;
-  $('light-toggle').setAttribute('aria-pressed', String(lightMode));
-  $('light-toggle').addEventListener('click', () => setLightMode(!lightMode));
   $('btn-how').addEventListener('click', () => $('how-dialog').showModal());
   $('btn-next').addEventListener('click', next);
+  $('btn-confirm').addEventListener('click', confirmAnswer);
   $('btn-start').addEventListener('click', () => {
     if (ctx.inviteToken) return startWithInvite();
     startDemo();
   });
 
   // A cena carrega em paralelo; o CTA não espera por ela.
-  mountScene(lightMode);
+  mountScene();
 
   const [campaign, resumed] = await Promise.all([
     fetch('/api/campaign/current', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -534,5 +580,5 @@ async function boot() {
   }
 }
 
-window.__gioDebug = { sceneInfo: () => scene?.info ?? null, stage: () => sceneStage, sceneState: () => scene?.debugState?.() ?? null, settle: () => scene?.settle?.() };
+window.__gioDebug = { setStage: (n) => setStage(n, { instant: true }), sceneInfo: () => scene?.info ?? null, stage: () => sceneStage, sceneState: () => scene?.debugState?.() ?? null, settle: () => scene?.settle?.() };
 boot();

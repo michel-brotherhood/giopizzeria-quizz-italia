@@ -1,0 +1,106 @@
+[
+  {
+    "arquivo": "assets/cenario/alta/cozinha-sem-interface-ampliado.png",
+    "largura": 3840,
+    "altura": 2161,
+    "modo": "RGB",
+    "bytes": 9256002,
+    "ampliado": true
+  },
+  {
+    "arquivo": "assets/cenario/originais/cozinha-sem-interface.png",
+    "largura": 1672,
+    "altura": 941,
+    "modo": "RGB",
+    "bytes": 2621408,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/cenario/web/cozinha-sem-interface.webp",
+    "largura": 1672,
+    "altura": 941,
+    "modo": "RGB",
+    "bytes": 356704,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/marca/originais/43db8e057beb44eba0c450b430002e8c.png",
+    "largura": 2048,
+    "altura": 833,
+    "modo": "RGBA",
+    "bytes": 285181,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/marca/originais/50-top-pizza.png",
+    "largura": 2048,
+    "altura": 2048,
+    "modo": "RGBA",
+    "bytes": 212022,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/marca/originais/Associazione-Verace-Pizza-Napoletana-Logo (1).png",
+    "largura": 900,
+    "altura": 900,
+    "modo": "RGBA",
+    "bytes": 452810,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/marca/originais/GIOPizzeria__Logotipo_Tres_Tintas_C.png",
+    "largura": 1462,
+    "altura": 2048,
+    "modo": "RGBA",
+    "bytes": 178601,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/marca/originais/GIOPizzeria__Logotipo_Una_Tinta_B.png",
+    "largura": 1462,
+    "altura": 2048,
+    "modo": "RGBA",
+    "bytes": 192818,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/marca/originais/GIOPizzeria__Logotipo_Una_Tinta_C.png",
+    "largura": 1463,
+    "altura": 2048,
+    "modo": "RGBA",
+    "bytes": 187736,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/pizza/alta/pizza-mozzarella-transparente-ampliado.png",
+    "largura": 2508,
+    "altura": 2508,
+    "modo": "RGBA",
+    "bytes": 5925851,
+    "ampliado": true
+  },
+  {
+    "arquivo": "assets/pizza/originais/pizza-mozzarella-transparente.png",
+    "largura": 1254,
+    "altura": 1254,
+    "modo": "RGBA",
+    "bytes": 1965215,
+    "ampliado": false
+  },
+  {
+    "arquivo": "assets/pizza/web/pizza-mozzarella-transparente.webp",
+    "largura": 1254,
+    "altura": 1254,
+    "modo": "RGBA",
+    "bytes": 350230,
+    "ampliado": false
+  },
+  {
+    "arquivo": "referencias/previa-desktop-mobile.png",
+    "largura": 1672,
+    "altura": 941,
+    "modo": "RGB",
+    "bytes": 2188192,
+    "ampliado": false
+  }
+]

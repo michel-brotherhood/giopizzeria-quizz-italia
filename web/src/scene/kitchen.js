@@ -1,13 +1,23 @@
-// Bancada napolitana contemporânea: pedra clara, parede de tijolo, forno de cúpula em mosaico marinho,
-// pala de madeira (silhueta inspirada na pala do logotipo, como objeto cenográfico separado) e ingredientes.
+// Bancada do pizzaiolo (direção visual de 19/11/2026): pedra cinza quente com farinha, tábua redonda de
+// madeira sob a pizza, cerâmica creme salpicada (molho, mozzarella, vaso de manjericão), galheteiro de
+// azeite, pano listrado e, ao fundo à direita, o forno a lenha com arco de tijolos e luz quente.
 import * as THREE from 'three';
-import { stoneTexture, brickTexture, tileTexture, woodTexture, flourTexture, rng } from './textures.js';
+import { warmStoneTexture, brickTexture, woodTexture, flourTexture, glowTexture, speckleTexture, wallTileTexture, towelTexture, rng } from './textures.js';
+import { createFire } from './fire.js';
 
-export const OVEN = { x: -3.4, y: 0.3, z: -8.6, r: 4.2, mouthW: 1.95 };
+export const OVEN = { x: 3.8, y: 0.3, z: -8.6, r: 4.2, mouthW: 1.95 };
+export const BOARD_TOP = 0.09; // altura do tampo da tábua: a pizza apoia aqui
 export const OVEN_MOUTH = new THREE.Vector3(OVEN.x, OVEN.y + 0.05, OVEN.z + OVEN.r - 0.05);
 
 function lathe(points, seg = 40) {
   return new THREE.LatheGeometry(points.map(([x, y]) => new THREE.Vector2(x, y)), seg);
+}
+
+function planarUV(geo, size) {
+  const p = geo.attributes.position;
+  const uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) { uv[i * 2] = p.getX(i) / size + 0.5; uv[i * 2 + 1] = p.getZ(i) / size + 0.5; }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
 /** Pala: lâmina com ombros arredondados que afunilam até o cabo, como uma pala de forno real. */
@@ -26,187 +36,259 @@ function peelGeometry() {
   s.bezierCurveTo(-neckW - 0.35, neckY + 0.15, -w, shoulder - 0.45, -w, shoulder);
   const blade = new THREE.ExtrudeGeometry(s, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.02, bevelSegments: 2, curveSegments: 18 });
   blade.rotateX(-Math.PI / 2);
-  // UV planar para a madeira
-  blade.computeBoundingBox();
-  const p = blade.attributes.position;
-  const uv = new Float32Array(p.count * 2);
-  for (let i = 0; i < p.count; i++) { uv[i * 2] = p.getX(i) / 3.4 + 0.5; uv[i * 2 + 1] = p.getZ(i) / 3.4 + 0.5; }
-  blade.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  planarUV(blade, 3.4);
   return blade;
+}
+
+/** Tábua redonda com cabo (disco + cabo com furo), com tampo em y = BOARD_TOP. */
+function boardGeometry(radius) {
+  const a = 0.3;
+  const s = new THREE.Shape();
+  s.absarc(0, 0, radius, a, Math.PI * 2 - a, false);
+  s.lineTo(radius + 0.25, -0.3); s.lineTo(radius + 1.4, -0.26);
+  s.quadraticCurveTo(radius + 1.72, 0, radius + 1.4, 0.26);
+  s.lineTo(radius + 0.25, 0.3); s.lineTo(radius * Math.cos(a), radius * Math.sin(a));
+  const hole = new THREE.Path();
+  hole.absarc(radius + 1.36, 0, 0.09, 0, Math.PI * 2, true);
+  s.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: BOARD_TOP - 0.02, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.03, bevelSegments: 3, curveSegments: 64 });
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, 0.01, 0);
+  planarUV(geo, radius * 2.4);
+  return geo;
+}
+
+/** Remove da cúpula os triângulos que ficam atrás da boca (área coberta pela fachada). */
+function cutMouth(geo, scaleY) {
+  const g = geo.toNonIndexed();
+  const p = g.attributes.position, uv = g.attributes.uv;
+  const keepP = [], keepUv = [];
+  const lim = { x: OVEN.mouthW + 0.12, y: 0.28 + 0.95 + 0.12 };
+  for (let i = 0; i < p.count; i += 3) {
+    let cx = 0, cy = 0, cz = 0;
+    for (let k = 0; k < 3; k++) { cx += p.getX(i + k) / 3; cy += p.getY(i + k) / 3; cz += p.getZ(i + k) / 3; }
+    if (cz > 1.5 && Math.abs(cx) < lim.x && cy * scaleY < lim.y) continue;
+    for (let k = 0; k < 3; k++) {
+      keepP.push(p.getX(i + k), p.getY(i + k), p.getZ(i + k));
+      keepUv.push(uv.getX(i + k), uv.getY(i + k));
+    }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(keepP, 3));
+  out.setAttribute('uv', new THREE.Float32BufferAttribute(keepUv, 2));
+  out.computeVertexNormals();
+  return out;
+}
+
+function leafGeometry(len, wid) {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.bezierCurveTo(wid * 0.9, len * 0.15, wid * 0.75, len * 0.75, 0, len);
+  s.bezierCurveTo(-wid * 0.75, len * 0.75, -wid * 0.9, len * 0.15, 0, 0);
+  const geo = new THREE.ShapeGeometry(s, 8);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, x * x * 2.2); }
+  geo.computeVertexNormals();
+  return geo;
 }
 
 export function createKitchen({ quality = 'high' } = {}) {
   const root = new THREE.Group();
   const r = rng(99);
-  const aniso = quality === 'high' ? 4 : 1;
+  const hi = quality === 'high';
+  const aniso = hi ? 8 : 1;
+  const shadow = (m, cast = true, receive = true) => { m.castShadow = cast; m.receiveShadow = receive; return m; };
 
-  // ---- Bancada de pedra (estende-se até a base do forno) ----
-  const stone = stoneTexture(quality === 'high' ? 512 : 256);
+  // ---- Bancada de pedra quente ----
+  const stone = warmStoneTexture(hi ? 1024 : 512);
   stone.anisotropy = aniso;
-  stone.repeat.set(2, 1);
-  const stoneMat = new THREE.MeshStandardMaterial({ map: stone, roughness: 0.58, metalness: 0 });
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(18, 0.5, 8.2), stoneMat);
+  stone.repeat.set(1.8, 0.85);
+  const counter = shadow(new THREE.Mesh(new THREE.BoxGeometry(18, 0.5, 8.2), new THREE.MeshStandardMaterial({ map: stone, roughness: 0.78 })), false);
   counter.position.set(0, -0.25, -1.15);
-  counter.receiveShadow = true;
   root.add(counter);
 
-  // ---- Parede de tijolo ----
-  const brick = brickTexture(quality === 'high' ? 512 : 256);
-  brick.repeat.set(7, 4);
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(44, 22), new THREE.MeshStandardMaterial({ map: brick, roughness: 0.92, color: 0xd9c4b0 }));
+  // ---- Parede de azulejo vinho ----
+  const wall = shadow(new THREE.Mesh(new THREE.PlaneGeometry(44, 22), new THREE.MeshStandardMaterial({ map: wallTileTexture(hi ? 512 : 256), roughness: 0.4, color: 0x8a7470 })), false);
   wall.position.set(0, 5, -13.8);
-  wall.receiveShadow = true;
   root.add(wall);
 
-  // ---- Forno napolitano (escala plausível: boca ≈ 39 cm para pizza de 30 cm) ----
+  // ---- Forno a lenha ao fundo à direita ----
   const oven = new THREE.Group();
   oven.position.set(OVEN.x, OVEN.y, OVEN.z);
-  const stucco = new THREE.MeshStandardMaterial({ color: 0xe9dcc1, roughness: 0.9 });
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(9.6, 2.6, 9.4), stucco);
+  const bricks = brickTexture(hi ? 512 : 256);
+  bricks.repeat.set(1, 1);
+  const brickMat = new THREE.MeshStandardMaterial({ map: bricks, roughness: 0.9, color: 0xc2a690 });
+  const plinth = shadow(new THREE.Mesh(new THREE.BoxGeometry(9.6, 2.6, 9.4), new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.85 })), false);
   plinth.position.set(0, -1.3 - 0.001, -0.3);
-  plinth.receiveShadow = true;
   oven.add(plinth);
-  // faixa vermelha (acento da marca) na borda do plinto
-  const band = new THREE.Mesh(new THREE.BoxGeometry(9.62, 0.1, 9.42), new THREE.MeshStandardMaterial({ color: 0xc0322a, roughness: 0.6 }));
-  band.position.set(0, -0.07, -0.3);
-  oven.add(band);
-
-  const tiles = tileTexture(quality === 'high' ? 512 : 256);
-  tiles.repeat.set(9, 1);
-  const domeGeo = new THREE.SphereGeometry(OVEN.r, 64, 22, 0, Math.PI * 2, 0, Math.PI / 2);
-  const dome = new THREE.Mesh(domeGeo, new THREE.MeshStandardMaterial({ map: tiles, roughness: 0.42, metalness: 0.05 }));
+  // cúpula em reboco de pedra escura (o arco de tijolos é o protagonista, como na direção)
+  const domeTex = brickTexture(hi ? 512 : 256);
+  domeTex.repeat.set(5, 1.6);
+  const dome = shadow(new THREE.Mesh(cutMouth(new THREE.SphereGeometry(OVEN.r, 72, 24, 0, Math.PI * 2, 0, Math.PI / 2), 0.8),
+    new THREE.MeshStandardMaterial({ map: domeTex, roughness: 0.92, color: 0x6e625a })));
   dome.scale.y = 0.8;
-  dome.castShadow = true;
-  dome.receiveShadow = true;
   oven.add(dome);
-
-  // Boca em arco abatido, fachada em estuque creme
-  const fw = 2.35, fh = 2.25;
+  // Fachada em tijolo com boca em arco abatido
+  const fw = 2.35, fh = 2.1;
   const facade = new THREE.Shape();
-  facade.moveTo(-fw, 0); facade.lineTo(fw, 0); facade.lineTo(fw, fh * 0.6);
-  facade.quadraticCurveTo(fw, fh, 0, fh); facade.quadraticCurveTo(-fw, fh, -fw, fh * 0.6); facade.lineTo(-fw, 0);
+  facade.moveTo(-fw, 0); facade.lineTo(fw, 0); facade.lineTo(fw, fh * 0.55);
+  facade.quadraticCurveTo(fw, fh, 0, fh); facade.quadraticCurveTo(-fw, fh, -fw, fh * 0.55); facade.lineTo(-fw, 0);
   const hw = OVEN.mouthW, side = 0.28, archH = 0.95;
   const hole = new THREE.Path();
   hole.moveTo(-hw, 0); hole.lineTo(-hw, side); hole.absellipse(0, side, hw, archH, Math.PI, 0, true); hole.lineTo(hw, 0); hole.lineTo(-hw, 0);
   facade.holes.push(hole);
-  const pietra = new THREE.MeshStandardMaterial({ color: 0xbfae93, roughness: 0.86 });
-  const facadeMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(facade, { depth: 0.9, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2, curveSegments: 24 }), pietra);
+  const facadeGeo = new THREE.ExtrudeGeometry(facade, { depth: 0.9, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 2, curveSegments: 28 });
+  const fp = facadeGeo.attributes.position;
+  const fuv = new Float32Array(fp.count * 2);
+  for (let i = 0; i < fp.count; i++) { fuv[i * 2] = fp.getX(i) / 3.2 + fp.getZ(i) * 0.25; fuv[i * 2 + 1] = fp.getY(i) / 3.2; }
+  facadeGeo.setAttribute('uv', new THREE.BufferAttribute(fuv, 2));
+  const facadeMesh = shadow(new THREE.Mesh(facadeGeo, brickMat));
   facadeMesh.position.set(0, 0, OVEN.r - 0.9);
-  facadeMesh.castShadow = true;
-  facadeMesh.receiveShadow = true;
   oven.add(facadeMesh);
-  // arco de tijolo refratário ao redor da boca
-  const archMat = new THREE.MeshStandardMaterial({ color: 0x9a4a2c, roughness: 0.85 });
-  const arch = new THREE.Mesh(new THREE.TorusGeometry(hw + 0.12, 0.11, 8, 40, Math.PI), archMat);
-  arch.scale.y = (archH + 0.12) / (hw + 0.12);
-  arch.position.set(0, side, OVEN.r + 0.06);
+  const archMat = new THREE.MeshStandardMaterial({ color: 0x8a4a2e, roughness: 0.85, emissive: 0xff5a1a, emissiveIntensity: 0.1 });
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(hw + 0.1, 0.1, 8, 48, Math.PI), archMat);
+  arch.scale.y = (archH + 0.1) / (hw + 0.1);
+  arch.position.set(0, side, OVEN.r + 0.04);
   oven.add(arch);
-
-  // Interior: fundo com brilho de brasa (gradiente radial)
-  const gc = document.createElement('canvas'); gc.width = gc.height = 128;
-  const gg = gc.getContext('2d');
-  const grad = gg.createRadialGradient(64, 84, 6, 64, 74, 66);
-  grad.addColorStop(0, '#ffd28a'); grad.addColorStop(0.32, '#ff8a3a'); grad.addColorStop(0.72, '#6e200e'); grad.addColorStop(1, '#160704');
-  gg.fillStyle = grad; gg.fillRect(0, 0, 128, 128);
-  const glowTex = new THREE.CanvasTexture(gc); glowTex.colorSpace = THREE.SRGBColorSpace;
-  const glowMat = new THREE.MeshBasicMaterial({ map: glowTex, toneMapped: false });
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 2.6), glowMat);
-  glow.position.set(0, 1.1, -0.6);
-  oven.add(glow);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(OVEN.r - 0.3, 40), new THREE.MeshStandardMaterial({ color: 0x3a1c12, roughness: 1, emissive: 0x401406, emissiveIntensity: 0.6 }));
+  const sill = shadow(new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.18, 1.0), new THREE.MeshStandardMaterial({ color: 0x6b5f55, roughness: 0.8 })));
+  sill.position.set(0, -0.08, OVEN.r + 0.45);
+  oven.add(sill);
+  // Interior: cúpula interna e piso refratário que recebem a luz do fogo
+  const innerMat = new THREE.MeshStandardMaterial({ color: 0x3a1a10, roughness: 0.95, side: THREE.BackSide, emissive: 0x2a0c04, emissiveIntensity: 1 });
+  const inner = new THREE.Mesh(new THREE.SphereGeometry(OVEN.r - 0.25, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), innerMat);
+  inner.scale.y = 0.7;
+  oven.add(inner);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x6b3a26, roughness: 0.95, emissive: 0x3a1206, emissiveIntensity: 0.8 });
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(OVEN.r - 0.3, 48), floorMat);
   floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01;
+  floor.receiveShadow = true;
   oven.add(floor);
-  // chaminé
-  const flue = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.44, 4.2, 18), stucco);
-  flue.position.set(0, 4.3, OVEN.r - 1.7);
-  oven.add(flue);
+  const fire = createFire({ embers: hi ? 48 : 24 });
+  fire.group.position.set(1.3, 0.02, -1.5);
+  oven.add(fire.group);
+  const haloMat = new THREE.SpriteMaterial({ map: glowTexture(128), color: 0xffa860, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, opacity: 0.3 });
+  const halo = new THREE.Sprite(haloMat);
+  halo.scale.set(5.2, 2.6, 1);
+  halo.position.set(0, 0.85, OVEN.r + 0.3);
+  oven.add(halo);
   root.add(oven);
 
-  // ---- Farinha sobre a bancada ----
-  const flour = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshStandardMaterial({ map: flourTexture(), transparent: true, depthWrite: false, roughness: 1 }));
-  flour.rotation.x = -Math.PI / 2;
-  flour.position.set(0.1, 0.004, 0.45);
-  flour.receiveShadow = true;
-  root.add(flour);
+  // ---- Farinha irregular sobre a pedra ----
+  const flourMat = new THREE.MeshStandardMaterial({ map: flourTexture(hi ? 512 : 256), transparent: true, depthWrite: false, roughness: 1 });
+  for (const [x, z, w, d, rot] of [[0.2, 0.5, 6.4, 5.6, 0.4], [-2.2, 1.6, 2.8, 2.2, 1.7], [2.6, -1.0, 2.6, 2.2, 2.6]]) {
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(w, d), flourMat);
+    f.rotation.x = -Math.PI / 2; f.rotation.z = rot;
+    f.position.set(x, 0.003, z);
+    f.receiveShadow = true;
+    root.add(f);
+  }
 
-  // ---- Pala de madeira ----
-  const wood = woodTexture(quality === 'high' ? 512 : 256);
-  const woodMat = new THREE.MeshStandardMaterial({ map: wood, roughness: 0.72 });
+  // ---- Madeira: tábua redonda sob a pizza e pala ----
+  const wood = woodTexture(hi ? 512 : 256);
+  wood.anisotropy = aniso;
+  const woodMat = new THREE.MeshStandardMaterial({ map: wood, roughness: 0.82, color: 0xbfa58c });
+  const board = shadow(new THREE.Mesh(boardGeometry(1.8), woodMat));
+  board.position.set(0, 0, 0.4);
+  board.rotation.y = -2.4; // cabo para a frente, à esquerda (como na prévia)
+  root.add(board);
+  const boardFlour = new THREE.Mesh(new THREE.CircleGeometry(1.72, 48), flourMat);
+  boardFlour.rotation.x = -Math.PI / 2;
+  boardFlour.position.set(0, BOARD_TOP + 0.002, 0.4);
+  root.add(boardFlour);
+
   const peel = new THREE.Group();
-  const blade = new THREE.Mesh(peelGeometry(), woodMat);
-  blade.castShadow = true; blade.receiveShadow = true;
-  peel.add(blade);
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 3.4, 14), woodMat);
+  peel.add(shadow(new THREE.Mesh(peelGeometry(), woodMat)));
+  const handle = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 3.4, 14), woodMat));
   handle.rotation.x = Math.PI / 2;
   handle.position.set(0, 0.03, 1.45 + 1.7);
-  handle.castShadow = true;
   peel.add(handle);
-  // a lâmina aponta para -z; o cabo para +z
   root.add(peel);
 
-  // ---- Ingredientes e utensílios ----
-  const terracotta = new THREE.MeshStandardMaterial({ color: 0xb4572f, roughness: 0.82 });
-  const bowl = new THREE.Mesh(lathe([[0, 0], [0.42, 0], [0.62, 0.12], [0.78, 0.36], [0.8, 0.42], [0.72, 0.42], [0.6, 0.18], [0, 0.12]], 40), terracotta);
-  bowl.position.set(-2.55, 0, 1.25);
-  bowl.castShadow = true; bowl.receiveShadow = true;
+  // ---- Cerâmica creme salpicada ----
+  const ceramic = new THREE.MeshStandardMaterial({ map: speckleTexture(256), roughness: 0.62 });
+  const bowlProfile = [[0, 0], [0.42, 0], [0.62, 0.12], [0.8, 0.4], [0.84, 0.52], [0.78, 0.52], [0.6, 0.2], [0, 0.14]];
+  // molho de tomate com colher de pau
+  const bowl = shadow(new THREE.Mesh(lathe(bowlProfile, 48), ceramic));
+  bowl.position.set(-2.9, 0, -0.8);
   root.add(bowl);
-  const sauceIn = new THREE.Mesh(new THREE.CircleGeometry(0.66, 32), new THREE.MeshStandardMaterial({ color: 0xa3251a, roughness: 0.35 }));
-  sauceIn.rotation.x = -Math.PI / 2; sauceIn.position.set(-2.55, 0.32, 1.25);
+  const sauceIn = new THREE.Mesh(new THREE.CircleGeometry(0.72, 40), new THREE.MeshStandardMaterial({ color: 0xa8231a, roughness: 0.3 }));
+  sauceIn.rotation.x = -Math.PI / 2; sauceIn.position.set(-2.9, 0.42, -0.8);
   root.add(sauceIn);
-
-  const glaze = new THREE.MeshStandardMaterial({ color: 0xf1e9d8, roughness: 0.28 });
-  const bowl2 = new THREE.Mesh(lathe([[0, 0], [0.38, 0], [0.6, 0.1], [0.72, 0.34], [0.74, 0.4], [0.68, 0.4], [0.56, 0.16], [0, 0.1]], 40), glaze);
-  const B2 = { x: 2.35, z: -1.75 };
-  bowl2.position.set(B2.x, 0, B2.z);
-  bowl2.castShadow = true; bowl2.receiveShadow = true;
+  const spoon = new THREE.Group();
+  const spoonHead = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), woodMat);
+  spoonHead.scale.set(1, 0.4, 1.4);
+  spoon.add(spoonHead);
+  const spoonStick = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.5, 8), woodMat));
+  spoonStick.position.set(0, 0, 0.85); spoonStick.rotation.x = Math.PI / 2;
+  spoon.add(spoonStick);
+  spoon.position.set(-2.95, 0.45, -0.85);
+  spoon.rotation.set(-0.55, 0.5, 0);
+  root.add(spoon);
+  // mozzarella em pedaços
+  const bowl2 = shadow(new THREE.Mesh(lathe(bowlProfile.map(([x, y]) => [x * 0.9, y * 0.9]), 48), ceramic));
+  bowl2.position.set(-1.1, 0, -2.4);
   root.add(bowl2);
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.71, 0.018, 6, 40), new THREE.MeshStandardMaterial({ color: 0x041e42, roughness: 0.4 }));
-  rim.rotation.x = Math.PI / 2; rim.position.set(B2.x, 0.4, B2.z);
-  root.add(rim);
   const mozzMat = new THREE.MeshStandardMaterial({ color: 0xf8f4ea, roughness: 0.45 });
-  for (const [dx, dz, s] of [[-0.18, 0.05, 0.26], [0.2, -0.08, 0.24], [0.02, 0.24, 0.22]]) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(s, 20, 14), mozzMat);
-    b.position.set(B2.x + dx, 0.28 + s * 0.6, B2.z + dz);
-    b.castShadow = true;
+  for (let i = 0; i < 6; i++) {
+    const b = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.24), mozzMat), true, false);
+    const ang = i * 1.1;
+    b.position.set(-1.1 + Math.cos(ang) * 0.3, 0.36 + (i % 2) * 0.08, -2.4 + Math.sin(ang) * 0.28);
+    b.rotation.set(r() * 0.6, r() * 3, r() * 0.6);
     root.add(b);
   }
 
-  const tomatoMat = new THREE.MeshStandardMaterial({ color: 0xc4301c, roughness: 0.32 });
-  const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f6b22, roughness: 0.6 });
-  for (const [x, z, ry] of [[-1.55, -1.7, 0.4], [-1.05, -1.95, 1.4], [-1.25, -1.35, 2.3]]) {
-    const t = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 14), tomatoMat);
-    t.scale.set(1, 0.9, 1.55); t.position.set(x, 0.18, z); t.rotation.y = ry;
-    t.castShadow = true;
-    root.add(t);
-    const st = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.08, 6), stemMat);
-    st.position.set(x + Math.sin(ry) * 0.3, 0.2, z + Math.cos(ry) * 0.3);
-    root.add(st);
+  // ---- Galheteiro de azeite: vidro, azeite dourado e rolha ----
+  const glass = new THREE.Mesh(lathe([[0, 0], [0.42, 0], [0.5, 0.25], [0.5, 0.65], [0.3, 1.0], [0.15, 1.25], [0.14, 1.55], [0, 1.55]], 32),
+    new THREE.MeshStandardMaterial({ color: 0xfff6e0, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.38, depthWrite: false }));
+  glass.position.set(-0.3, 0, -3.3);
+  glass.renderOrder = 1;
+  const oilIn = shadow(new THREE.Mesh(lathe([[0, 0.02], [0.4, 0.02], [0.47, 0.25], [0.47, 0.62], [0, 0.62]], 32),
+    new THREE.MeshStandardMaterial({ color: 0xa8741a, roughness: 0.12, emissive: 0x2a1600, emissiveIntensity: 0.35, transparent: true, opacity: 0.88 })));
+  oilIn.position.copy(glass.position);
+  const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.11, 0.22, 12), new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 0.9 }));
+  cork.position.set(-0.3, 1.62, -3.3);
+  root.add(oilIn, glass, cork);
+
+  // ---- Vaso de manjericão ----
+  const pot = shadow(new THREE.Mesh(lathe([[0, 0], [0.55, 0], [0.62, 0.9], [0.66, 0.95], [0, 0.95]], 36), ceramic));
+  pot.position.set(-3.8, 0, -3.4);
+  root.add(pot);
+  const potBand = new THREE.Mesh(new THREE.CylinderGeometry(0.625, 0.62, 0.08, 36, 1, true), new THREE.MeshStandardMaterial({ color: 0xb8402c, roughness: 0.6 }));
+  potBand.position.set(-3.8, 0.72, -3.4);
+  root.add(potBand);
+  const basilMat = new THREE.MeshStandardMaterial({ color: 0x356f2a, roughness: 0.45, side: THREE.DoubleSide });
+  const leafGeo = leafGeometry(0.42, 0.22);
+  const leaves = new THREE.InstancedMesh(leafGeo, basilMat, 46);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
+  for (let i = 0; i < 46; i++) {
+    const ang = i * 2.399, h = 1.0 + (i / 46) * 1.3, rad = 0.18 + Math.sin(i * 0.7) * 0.12 + (1 - i / 46) * 0.3;
+    pos.set(-3.8 + Math.cos(ang) * rad, h, -3.4 + Math.sin(ang) * rad);
+    e.set(-0.9 + r() * 0.5, -ang + Math.PI / 2, r() * 0.4);
+    q.setFromEuler(e);
+    const k = 0.8 + r() * 0.6; sc.set(k, k, k);
+    leaves.setMatrixAt(i, m4.compose(pos, q, sc));
   }
-
-  // Garrafa de azeite
-  const bottle = new THREE.Mesh(lathe([[0, 0], [0.32, 0], [0.34, 0.08], [0.34, 1.05], [0.3, 1.2], [0.12, 1.42], [0.11, 1.75], [0.13, 1.8], [0, 1.8]], 28),
-    new THREE.MeshStandardMaterial({ color: 0x2e4a1f, roughness: 0.12, metalness: 0.0 }));
-  bottle.position.set(-3.9, 0, -0.9);
-  bottle.castShadow = true;
-  root.add(bottle);
-  const label = new THREE.Mesh(new THREE.CylinderGeometry(0.345, 0.345, 0.42, 28, 1, true), new THREE.MeshStandardMaterial({ color: 0xeedebd, roughness: 0.8 }));
-  label.position.set(-3.9, 0.6, -0.9);
-  root.add(label);
-
-  // Folhas de manjericão soltas
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6e2c, roughness: 0.4, side: THREE.DoubleSide });
-  const leafShape = new THREE.Shape();
-  leafShape.moveTo(0, 0); leafShape.bezierCurveTo(0.17, 0.06, 0.15, 0.3, 0, 0.42); leafShape.bezierCurveTo(-0.15, 0.3, -0.17, 0.06, 0, 0);
-  const leafGeo = new THREE.ShapeGeometry(leafShape, 8);
-  leafGeo.rotateX(-Math.PI / 2);
-  for (let i = 0; i < 5; i++) {
-    const l = new THREE.Mesh(leafGeo, leafMat);
-    l.position.set(-0.6 + r() * 0.8, 0.012 + i * 0.004, -2.6 + r() * 0.6);
-    l.rotation.y = r() * Math.PI * 2;
-    l.rotation.z = (r() - 0.5) * 0.3;
-    l.castShadow = true;
+  leaves.castShadow = true;
+  root.add(leaves);
+  for (let i = 0; i < 3; i++) {
+    const l = shadow(new THREE.Mesh(leafGeo, basilMat), true, false);
+    l.rotation.set(-Math.PI / 2, 0, i * 1.2 + 0.4);
+    l.position.set(2.1 + i * 0.12, 0.02 + i * 0.01, -1.7 + i * 0.05);
     root.add(l);
   }
 
-  return { root, peel, oven, glowMat, flour, counter };
+  // ---- Pano de prato dobrado ----
+  const towelGeo = new THREE.BoxGeometry(2.6, 0.12, 1.7, 24, 1, 12);
+  const tp = towelGeo.attributes.position;
+  for (let i = 0; i < tp.count; i++) {
+    const x = tp.getX(i), z = tp.getZ(i);
+    tp.setY(i, tp.getY(i) + Math.sin(x * 2.4 + z * 1.3) * 0.04 + Math.max(0, -x - 0.6) * 0.18);
+  }
+  towelGeo.computeVertexNormals();
+  const towel = shadow(new THREE.Mesh(towelGeo, new THREE.MeshStandardMaterial({ map: towelTexture(256), roughness: 0.95 })));
+  towel.position.set(-3.7, 0.07, 1.9);
+  towel.rotation.y = 0.5;
+  root.add(towel);
+
+  return { root, peel, oven, fire, halo: haloMat, arch: archMat, inner: innerMat, floor: floorMat, counter };
 }

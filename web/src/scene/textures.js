@@ -120,10 +120,13 @@ export function woodTexture(size = 512) {
   const n = makeNoise(31, 64);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const u = x / size, v = y / size;
-    const ring = Math.sin((u * 26 + fbm(n, u * 6, v * 1.5, 4) * 5) * Math.PI);
+    // veios longos e irregulares + fibras finas, tom de carvalho envelhecido
+    const ring = Math.sin((u * 22 + fbm(n, u * 5, v * 1.2, 4) * 6) * Math.PI);
+    const fiber = fbm(n, u * 90, v * 3, 2);
     const k = 0.5 + 0.5 * ring;
+    const d = (fiber - 0.5) * 30 - (ring > 0.92 ? 22 : 0);
     const i = (y * size + x) * 4;
-    img.data[i] = 168 + k * 30; img.data[i + 1] = 118 + k * 22; img.data[i + 2] = 72 + k * 14; img.data[i + 3] = 255;
+    img.data[i] = 158 + k * 18 + d; img.data[i + 1] = 116 + k * 15 + d * 0.85; img.data[i + 2] = 76 + k * 10 + d * 0.6; img.data[i + 3] = 255;
   }
   g.putImageData(img, 0, 0);
   return tex(c);
@@ -217,4 +220,105 @@ export function sauceTexture(size = 512) {
   const t = tex(c);
   t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   return t;
+}
+
+/** Halo radial (luz do forno, brilho de brasa). */
+export function glowTexture(size = 128, inner = 'rgba(255,214,150,1)', mid = 'rgba(255,128,48,.45)') {
+  const [c, g] = canvas(size);
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, inner);
+  grad.addColorStop(0.35, mid);
+  grad.addColorStop(1, 'rgba(255,90,20,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Vapor: mancha macia e irregular, usada em sprites que sobem da pizza assada. */
+export function steamTexture(size = 128) {
+  const [c, g] = canvas(size);
+  const img = g.createImageData(size, size);
+  const n = makeNoise(71, 32);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const dx = x / size - 0.5, dy = y / size - 0.5;
+    const d = Math.sqrt(dx * dx + dy * dy) * 2;
+    const a = Math.max(0, 1 - d) ** 1.6 * (0.45 + fbm(n, x / 10, y / 10, 3) * 0.55);
+    const i = (y * size + x) * 4;
+    img.data[i] = 255; img.data[i + 1] = 248; img.data[i + 2] = 236; img.data[i + 3] = a * 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Pedra cinza quente (granito/travertino escuro) da bancada, com poros e variação suave. */
+export function warmStoneTexture(size = 512) {
+  const [c, g] = canvas(size);
+  const img = g.createImageData(size, size);
+  const n = makeNoise(19, 64);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const u = (x / size) * 64, v = (y / size) * 64;
+    const base = fbm(n, u * 0.1, v * 0.1, 5);
+    const speck = n(u * 4.3, v * 4.3);
+    let k = 104 + (base - 0.5) * 46;
+    if (speck > 0.88) k -= 14; else if (speck < 0.06) k += 10;
+    const i = (y * size + x) * 4;
+    img.data[i] = k * 1.06; img.data[i + 1] = k * 0.96; img.data[i + 2] = k * 0.86; img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return tex(c, { repeat: [2, 1] });
+}
+
+/** Cerâmica creme salpicada (tigelas e vaso). */
+export function speckleTexture(size = 256) {
+  const [c, g] = canvas(size);
+  const r = rng(29);
+  g.fillStyle = '#efe4cf';
+  g.fillRect(0, 0, size, size);
+  for (let i = 0; i < 520; i++) {
+    const s = 0.6 + r() * 1.8;
+    g.fillStyle = r() < 0.75 ? `rgba(120,78,46,${0.35 + r() * 0.4})` : `rgba(180,60,40,${0.3 + r() * 0.3})`;
+    g.beginPath(); g.arc(r() * size, r() * size, s, 0, Math.PI * 2); g.fill();
+  }
+  return tex(c, { repeat: [3, 1] });
+}
+
+/** Azulejo vinho com rejunte (parede ao fundo). */
+export function wallTileTexture(size = 512) {
+  const [c, g] = canvas(size);
+  const r = rng(37);
+  g.fillStyle = '#2a1512';
+  g.fillRect(0, 0, size, size);
+  const cells = 8, s = size / cells;
+  for (let y = 0; y < cells; y++) for (let x = 0; x < cells; x++) {
+    const l = 16 + r() * 6;
+    const grad = g.createLinearGradient(x * s, y * s, x * s + s, y * s + s);
+    grad.addColorStop(0, `hsl(${356 + r() * 6} 40% ${l + 5}%)`);
+    grad.addColorStop(1, `hsl(${354 + r() * 6} 42% ${l}%)`);
+    g.fillStyle = grad;
+    g.fillRect(x * s + 3, y * s + 3, s - 6, s - 6);
+  }
+  return tex(c, { repeat: [16, 8] });
+}
+
+/** Pano de prato creme com listras vermelhas. */
+export function towelTexture(size = 256) {
+  const [c, g] = canvas(size);
+  const n = makeNoise(43, 32);
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const weave = ((x >> 1) + (y >> 1)) % 2 ? 6 : -6;
+    const band = (y / size) % 1;
+    const red = (band > 0.18 && band < 0.26) || (band > 0.31 && band < 0.35);
+    const k = (fbm(n, x / 6, y / 6, 2) - 0.5) * 12 + weave;
+    const i = (y * size + x) * 4;
+    if (red) { img.data[i] = 186 + k; img.data[i + 1] = 58 + k; img.data[i + 2] = 44 + k; }
+    else { img.data[i] = 232 + k; img.data[i + 1] = 222 + k; img.data[i + 2] = 200 + k; }
+    img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return tex(c);
 }

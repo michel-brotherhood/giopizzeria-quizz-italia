@@ -1,6 +1,6 @@
 // Pizza napolitana procedural: panetto -> disco com cornicione -> molho -> mozzarella -> manjericão -> azeite -> assada.
 import * as THREE from 'three';
-import { makeNoise, fbm, rng, doughTexture, sauceTexture } from './textures.js';
+import { makeNoise, fbm, rng, doughTexture, sauceTexture, steamTexture } from './textures.js';
 
 const R = 1.5; // raio do disco (≈30 cm na escala da cena)
 
@@ -60,13 +60,13 @@ function ballGeometry() {
 }
 
 function blobGeometry(seed) {
-  const geo = new THREE.IcosahedronGeometry(1, 3);
+  const geo = new THREE.SphereGeometry(1, 22, 14);
   const n = makeNoise(seed, 32);
   const p = geo.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
-    v.multiplyScalar(1 + (fbm(n, v.x * 2 + 9, v.z * 2 + v.y + 9, 3) - 0.5) * 0.45);
+    v.multiplyScalar(1 + (fbm(n, v.x * 1.6 + 9, v.z * 1.6 + v.y + 9, 3) - 0.5) * 0.55);
     p.setXYZ(i, v.x, v.y, v.z);
   }
   geo.computeVertexNormals();
@@ -119,11 +119,11 @@ export function createPizza() {
 
   const mozzMat = new THREE.MeshStandardMaterial({ color: 0xf6f0e2, roughness: 0.5, metalness: 0 });
   const mozz = [];
-  const mozzPos = [[0.05, 0.1], [-0.55, 0.35], [0.6, 0.45], [-0.25, -0.6], [0.5, -0.45], [-0.75, -0.2], [0.05, 0.75], [0.2, -0.15]];
+  const mozzPos = [[0.05, 0.1], [-0.55, 0.35], [0.6, 0.45], [-0.25, -0.6], [0.5, -0.45], [-0.75, -0.2], [0.05, 0.75], [0.2, -0.15], [-0.35, 0.8], [0.85, -0.05], [-0.85, 0.3]];
   mozzPos.forEach(([x, z], i) => {
     const m = new THREE.Mesh(blobGeometry(100 + i), mozzMat);
     const s = 0.17 + r() * 0.09;
-    m.userData = { x, z, s, rot: r() * Math.PI, delay: i * 0.06 };
+    m.userData = { x, z, s, rot: r() * Math.PI, delay: i * 0.045 };
     m.castShadow = true;
     m.rotation.y = m.userData.rot;
     mozz.push(m); group.add(m);
@@ -152,6 +152,18 @@ export function createPizza() {
     oil.add(m);
   }
   group.add(oil);
+
+  // Vapor da pizza recém-assada
+  const steamMap = steamTexture();
+  const steam = [];
+  for (let i = 0; i < 7; i++) {
+    const m = new THREE.SpriteMaterial({ map: steamMap, transparent: true, depthWrite: false, opacity: 0, color: 0xfff6ea });
+    const sp = new THREE.Sprite(m);
+    sp.userData = { phase: i / 7, x: Math.cos(i * 2.4) * 0.55, z: Math.sin(i * 2.4) * 0.45 };
+    sp.visible = false;
+    steam.push(sp); group.add(sp);
+  }
+  let steamAmt = 0;
 
   const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
   const pop = (t) => {
@@ -193,6 +205,7 @@ export function createPizza() {
       l.position.set(l.userData.x, 0.135 + (1 - Math.min(1, t)) * 0.3 - melt * 0.02, l.userData.z);
       l.rotation.set(0, l.userData.rot, 0);
     });
+    steamAmt = s.baked > 0.98 ? (s.steam ?? 1) : 0;
     oil.visible = s.oil > 0.01;
     oilMat.opacity = 0.45 * ease(s.oil);
 
@@ -209,12 +222,26 @@ export function createPizza() {
   }
 
   /** Destaque discreto ao acertar: brilho quente rápido no ingrediente. */
-  const highlightTargets = { 1: [doughMat], 2: [sauceMat], 3: [mozzMat], 4: [basilMat], 5: [oilMat] };
+  const highlightTargets = { 1: [doughMat], 2: [sauceMat], 3: [mozzMat], 4: [basilMat, oilMat] };
   function highlight(stage, amount) {
     for (const mats of Object.values(highlightTargets)) for (const m of mats) m.emissive?.setRGB(0, 0, 0);
     const list = highlightTargets[stage] ?? [doughMat];
     for (const m of list) m.emissive?.setRGB(0.22 * amount, 0.13 * amount, 0.04 * amount);
   }
 
-  return { group, apply, highlight, radius: R };
+  /** Anima o vapor (t em segundos). Retorna true se algo está visível e precisa de quadros. */
+  function tick(t) {
+    for (const sp of steam) {
+      sp.visible = steamAmt > 0.01;
+      if (!sp.visible) continue;
+      const life = (t * 0.22 + sp.userData.phase) % 1;
+      sp.position.set(sp.userData.x + Math.sin(t * 0.7 + sp.userData.phase * 9) * 0.15 * life, 0.3 + life * 2.2, sp.userData.z);
+      const k = 0.5 + life * 1.6;
+      sp.scale.set(k, k, 1);
+      sp.material.opacity = Math.sin(life * Math.PI) * 0.22 * steamAmt;
+    }
+    return steamAmt > 0.01;
+  }
+
+  return { group, apply, highlight, tick, radius: R };
 }
