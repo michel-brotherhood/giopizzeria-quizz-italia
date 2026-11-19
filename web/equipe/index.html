@@ -96,6 +96,15 @@
             <label>Estoque total <input name="totalStock" type="number" min="0" step="1"></label>
             <label>Início <input name="startsAt" type="datetime-local"></label>
             <label>Fim <input name="endsAt" type="datetime-local"></label>
+            <label>Regra de premiação
+              <select name="awardRule">
+                <option value="participation">Quem concluir as 8 perguntas ganha</option>
+                <option value="min_score">Quem atingir a pontuação mínima ganha</option>
+                <option value="every_n">A cada N partidas com a pontuação mínima, uma ganha</option>
+              </select>
+            </label>
+            <label>Acertos mínimos (de 8) <input name="minCorrect" type="number" min="1" max="8" step="1" value="7"></label>
+            <label>N (a cada quantas qualificadas) <input name="everyN" type="number" min="1" max="10000" step="1" value="15"></label>
             <label class="wide">Regras públicas <textarea name="rulesText" rows="3" maxlength="2000"></textarea></label>
             <label>Validade do convite (min) <input name="invitationTtlMinutes" type="number" min="1" value="30"></label>
             <label>Tempo de partida com reserva (min) <input name="sessionTtlMinutes" type="number" min="1" value="20"></label>

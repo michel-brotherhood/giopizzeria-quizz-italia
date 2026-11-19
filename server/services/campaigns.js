@@ -18,6 +18,9 @@ export function campaignView(c, { full = false } = {}) {
     startsAt: c.starts_at,
     endsAt: c.ends_at,
     hasStock: available > 0,
+    awardRule: c.award_rule,
+    minCorrect: c.min_correct,
+    everyN: c.every_n,
   };
   if (!full) return base;
   return {
@@ -31,6 +34,7 @@ export function campaignView(c, { full = false } = {}) {
     awardedCount: c.awarded_count,
     redeemedCount: c.redeemed_count,
     available,
+    qualifiedCount: c.qualified_count,
   };
 }
 
@@ -54,9 +58,12 @@ const EDITABLE = {
   startsAt: 'starts_at', endsAt: 'ends_at', invitationTtlMinutes: 'invitation_ttl_minutes',
   sessionTtlMinutes: 'session_ttl_minutes', rewardTtlMinutes: 'reward_ttl_minutes',
   minPlayMinutes: 'min_play_minutes', totalStock: 'total_stock',
+  awardRule: 'award_rule', minCorrect: 'min_correct', everyN: 'every_n',
 };
-const INT_COLS = new Set(['quantity_per_voucher', 'total_stock', 'invitation_ttl_minutes', 'session_ttl_minutes', 'reward_ttl_minutes', 'min_play_minutes']);
-const OFFER_FIELDS = new Set(['reward_name', 'quantity_per_voucher', 'rules_text']);
+const INT_COLS = new Set(['quantity_per_voucher', 'total_stock', 'invitation_ttl_minutes', 'session_ttl_minutes', 'reward_ttl_minutes', 'min_play_minutes', 'min_correct', 'every_n']);
+const AWARD_FIELDS = new Set(['award_rule', 'min_correct', 'every_n']);
+const AWARD_RULES = new Set(['participation', 'min_score', 'every_n']);
+const OFFER_FIELDS = new Set(['reward_name', 'quantity_per_voucher', 'rules_text', 'award_rule', 'min_correct', 'every_n']);
 
 function cleanInput(input = {}) {
   const out = {};
@@ -74,6 +81,10 @@ function cleanInput(input = {}) {
       v = d.toISOString();
     }
     if (typeof v === 'string') v = v.trim().slice(0, 2000);
+    if (col === 'award_rule' && !AWARD_RULES.has(v)) throw err('BAD_REQUEST', { field: k }, 'Regra de premiação inválida.');
+    if (col === 'min_correct' && (v < 1 || v > 8)) throw err('BAD_REQUEST', { field: k }, 'Acertos mínimos entre 1 e 8.');
+    if (col === 'every_n' && (v < 1 || v > 10000)) throw err('BAD_REQUEST', { field: k }, 'Intervalo entre 1 e 10000.');
+    if (AWARD_FIELDS.has(col) && v === null) continue;
     out[col] = v;
   }
   return out;
@@ -112,6 +123,8 @@ export async function updateCampaign(pool, operator, id, input) {
     if (cur.state === 'closed') throw err('INVALID_STATE');
     if (Object.keys(data).length === 0) return cur;
     if ('total_stock' in data && data.total_stock < cur.reserved_count + cur.awarded_count) throw err('STOCK_BELOW_COMMITTED');
+    // A regra de premiação não muda com a campanha no ar (seria injusto com quem já está jogando).
+    if (cur.state === 'active' && Object.keys(data).some((k) => AWARD_FIELDS.has(k) && data[k] !== cur[k])) throw err('AWARD_RULE_LOCKED');
     const offerChanged = Object.keys(data).some((k) => OFFER_FIELDS.has(k) && data[k] !== cur[k]);
     const sets = Object.keys(data).map((k, i) => `${k}=$${i + 2}`);
     if (offerChanged) sets.push('rules_version = rules_version + 1');

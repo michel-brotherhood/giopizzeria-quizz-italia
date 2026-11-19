@@ -36,6 +36,9 @@ dokku run gio-quiz npm run staff:create -- --user <login> --name "<Nome>" --role
 - `embedded-postgres` é devDependency (só dev/testes). Se o build ficar pesado, usar `NPM_CONFIG_PRODUCTION`/Dockerfile — a decidir.
 - **Não trocar `SESSION_SECRET` com campanha ativa.** Ele também (a) deriva a chave que cifra o token do voucher para o cliente reabrir o QR — após a troca, a equipe ainda consulta/entrega pelo código (guardado como hash), mas a tela do cliente falha ao reexibir o QR; e (b) é a chave do HMAC da referência de conta — após a troca, a mesma comanda deixaria de ser reconhecida na campanha corrente, quebrando a regra de um convite por conta. Trocar só entre campanhas.
 
+## Regras de premiação
+No painel (Gerenciar → nova campanha): **participação** (quem conclui ganha), **pontuação mínima** (ex.: 7 de 8) ou **a cada N qualificadas** (ex.: a cada 15 partidas com 7+ acertos, a 15ª ganha). Para mudar a regra, pause a campanha antes. A reserva de estoque é feita no início da partida e devolvida a quem não ganha. Confirme o formato com o jurídico antes de usar com brinde real (Lei 5.768/71).
+
 ## Ativar uma campanha real (somente com autorização do responsável)
 1. Gerente cria a campanha no painel com brinde, quantidade, regras públicas, período, estoque e validades.
 2. Responsável muda `REAL_CAMPAIGNS_ENABLED=true` (`dokku config:set`), o que reinicia o app.

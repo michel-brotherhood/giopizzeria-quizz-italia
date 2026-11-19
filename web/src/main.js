@@ -130,13 +130,19 @@ function el(tag, attrs = {}, ...children) {
 
 function setModePill() {
   const pill = $('mode-pill');
-  if (ctx.mode === 'demo') { pill.hidden = false; pill.textContent = 'Demonstração'; pill.className = 'pill pill-demo'; }
-  else if (ctx.mode === 'server' && ctx.state?.session?.campaign?.isTest) { pill.hidden = false; pill.textContent = 'Teste'; pill.className = 'pill pill-test'; }
+  if (ctx.mode === 'server' && ctx.state?.session?.campaign?.isTest) { pill.hidden = false; pill.textContent = 'Teste'; pill.className = 'pill pill-test'; }
   else pill.hidden = true;
 }
 
 function rewardLine(name, qty) {
   return qty && qty > 1 ? `${qty} × ${name}` : name;
+}
+
+/** Regra de premiação em linguagem simples (vem da campanha no servidor). */
+function awardRuleText(c) {
+  if (!c || !c.awardRule || c.awardRule === 'participation') return 'Concluiu as 8 perguntas, ganhou: o brinde não depende da pontuação.';
+  if (c.awardRule === 'min_score') return `Para ganhar, acerte pelo menos ${c.minCorrect} das 8 perguntas.`;
+  return `A cada ${c.everyN} partidas com pelo menos ${c.minCorrect} acertos, uma ganha o brinde (a ${c.everyN}ª da contagem).`;
 }
 
 function renderWelcome() {
@@ -153,7 +159,8 @@ function renderWelcome() {
       if (c.isTest) { offer.classList.add('test'); offer.append(el('p', { class: 'test-banner' }, 'Campanha de teste — sem valor de resgate')); }
       offer.append(el('p', { class: 'reward' }, rewardLine(c.rewardName, c.quantityPerVoucher)));
       if (c.rulesText) offer.append(el('p', {}, c.rulesText));
-      offer.append(el('p', { class: 'small' }, `Válido até ${fmtDay.format(new Date(c.endsAt))}, ${fmtTime.format(new Date(c.endsAt))} (horário de Brasília). Ao começar, reservamos uma unidade para a sua partida. O brinde não depende da pontuação.`));
+      offer.append(el('p', { class: 'rule' }, awardRuleText(c)));
+      offer.append(el('p', { class: 'small' }, `Válido até ${fmtDay.format(new Date(c.endsAt))}, ${fmtTime.format(new Date(c.endsAt))} (horário de Brasília), enquanto houver estoque.`));
     } else {
       offer.append(el('p', {}, 'Vamos conferir seu convite com o servidor ao começar.'));
     }
@@ -162,7 +169,8 @@ function renderWelcome() {
     offer.hidden = false;
     offer.append(el('h3', {}, 'Brinde da casa'));
     offer.append(el('p', {}, 'Peça à equipe seu acesso para participar com brinde.'));
-    offer.append(el('p', { class: 'small' }, 'Sem convite, você pode jogar a demonstração — ela não emite brinde.'));
+    offer.append(el('p', { class: 'rule' }, awardRuleText(c)));
+    offer.append(el('p', { class: 'small' }, 'Sem o acesso da equipe, você joga só pela diversão, sem brinde.'));
     start.textContent = 'Começar';
   } else {
     start.textContent = 'Começar';
@@ -416,15 +424,24 @@ function renderResult() {
     if (ctx.state.voucher) {
       area.append(voucherCard(ctx.state.voucher));
       if (ctx.state.voucher.state === 'issued') ctx.pollTimer = setInterval(pollVoucher, 15000);
+    } else if (s.awardOutcome === 'not_qualified') {
+      const correct = Math.round(s.score / 100);
+      area.append(el('div', { class: 'demo-note outcome' },
+        el('p', {}, el('strong', {}, 'Desta vez não deu brinde. '), `Você acertou ${correct} de 8; a meta era ${s.campaign.minCorrect} ou mais.`),
+        el('p', {}, 'Valeu por jogar! Peça um novo acesso à equipe na próxima visita.')));
+    } else if (s.awardOutcome === 'qualified_no_prize') {
+      area.append(el('div', { class: 'demo-note outcome' },
+        el('p', {}, el('strong', {}, 'Você bateu a meta e entrou na contagem! '), `O brinde vai para cada ${s.campaign.everyN}ª partida com ${s.campaign.minCorrect} ou mais acertos, e esta não foi a premiada.`),
+        el('p', {}, 'Valeu por jogar! Peça um novo acesso à equipe na próxima visita.')));
     } else {
       area.append(el('div', { class: 'demo-note' }, el('p', {}, 'Estamos conferindo seu brinde.'),
         el('button', { type: 'button', class: 'btn btn-secondary', onclick: () => finish() }, 'Conferir novamente')));
     }
-    actions.append(el('button', { type: 'button', class: 'btn btn-secondary', onclick: startDemo }, 'Jogar de novo (demonstração)'));
-    area.append(el('p', { class: 'small' }, 'Jogar de novo é só pela diversão: a demonstração não emite outro brinde.'));
+    actions.append(el('button', { type: 'button', class: 'btn btn-secondary', onclick: startDemo }, 'Jogar de novo (sem brinde)'));
+    area.append(el('p', { class: 'small' }, 'Jogar de novo é só pela diversão, sem outro brinde.'));
   } else {
     area.append(el('div', { class: 'demo-note' },
-      el('p', {}, el('strong', {}, 'Modo demonstração: '), 'nenhum brinde é emitido nesta partida.'),
+      el('p', {}, el('strong', {}, 'Esta partida não vale brinde. '), 'Foi só pela diversão.'),
       el('p', {}, ctx.campaign ? 'Para participar com brinde, peça à equipe o seu acesso.' : 'Obrigado por jogar com a gente!')));
     actions.append(el('button', { type: 'button', class: 'btn btn-primary', onclick: startDemo }, 'Jogar de novo'));
     if (ctx.serverVoucherState) actions.append(el('button', { type: 'button', class: 'btn btn-secondary', onclick: () => resumeServer() }, 'Voltar ao meu brinde'));
@@ -479,7 +496,7 @@ function showServerError(e) {
   $('x-msg').textContent = MSG[e.code] ?? e.message;
   const acts = $('x-actions');
   acts.replaceChildren(
-    el('button', { type: 'button', class: 'btn btn-primary', onclick: startDemo }, 'Jogar a demonstração'),
+    el('button', { type: 'button', class: 'btn btn-primary', onclick: startDemo }, 'Jogar sem brinde'),
     el('button', { type: 'button', class: 'btn btn-secondary', onclick: () => location.reload() }, 'Recarregar'));
   show('recovery', 'x-title');
 }
@@ -663,7 +680,7 @@ async function boot() {
   renderWelcome();
   if (resumed === 'network') {
     $('offer').hidden = false;
-    $('offer').append(el('p', { role: 'status' }, 'Sem conexão com o servidor agora. A demonstração funciona normalmente.'));
+    $('offer').append(el('p', { role: 'status' }, 'Sem conexão com o servidor agora. Dá para jogar normalmente, sem brinde.'));
   }
 }
 

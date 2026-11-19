@@ -11,7 +11,7 @@ if (config.isProd) {
   process.exit(1);
 }
 
-export const TEST_REWARD = 'DEMONSTRAÇÃO — SEM VALOR DE RESGATE';
+export const TEST_REWARD = 'Brinde de exemplo — sem valor de resgate';
 
 export async function seedTest(pool, { stock = 20, passwords = {} } = {}) {
   await migrate(pool, () => {});

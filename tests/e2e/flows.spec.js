@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { db, createInvite, answerCurrent, settle, STAFF, MANAGER, openRegistered } from './helpers.js';
 
-test.describe('demonstração', () => {
+test.describe('jogo livre (sem brinde)', () => {
   test('partida completa: 8 perguntas, feedback, pontuação e nenhum brinde', async ({ page }) => {
     await openRegistered(page, '/');
     await page.getByRole('button', { name: /começar/i }).click();
@@ -15,7 +15,9 @@ test.describe('demonstração', () => {
       await page.locator('#btn-next').click();
     }
     await expect(page.locator('#r-score')).toHaveText(String(correct));
-    await expect(page.locator('.demo-note')).toContainText('nenhum brinde');
+    await expect(page.locator('.demo-note')).toContainText('não vale brinde');
+    // a palavra "demonstração" não aparece no app
+    expect(await page.evaluate(() => document.body.innerText)).not.toMatch(/demonstra/i);
     await expect(page.locator('.voucher')).toHaveCount(0);
     expect(await page.evaluate(() => window.__gioDebug.stage())).toBe(8);
   });
@@ -135,7 +137,7 @@ test.describe('campanha de teste autorizada', () => {
     await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
     // token removido da barra de endereço imediatamente
     await expect.poll(() => page.url()).not.toContain('convite=');
-    await expect(page.locator('.offer')).toContainText('DEMONSTRAÇÃO — SEM VALOR DE RESGATE');
+    await expect(page.locator('.offer')).toContainText('Brinde de exemplo — sem valor de resgate');
     await expect(page.locator('.offer .test-banner')).toBeVisible();
     await page.getByRole('button', { name: 'Começar com brinde' }).click();
     await expect(page.locator('#mode-pill')).toHaveText('Teste');
@@ -293,6 +295,38 @@ test.describe('campanha de teste autorizada', () => {
     await page.getByRole('tab', { name: 'Conferir brinde' }).click();
     await page.getByRole('button', { name: 'Ler QR com a câmera' }).click();
     await expect(page.locator('#check-out')).toContainText(/Digite o código/);
+  });
+
+  test('pontuação mínima: regra aparece antes de começar e quem não atinge vê o motivo, sem voucher', async ({ page, request }) => {
+    const [{ id }] = await db(`SELECT id FROM campaigns WHERE state='active'`);
+    const set = async (body) => {
+      // o convite usa login de atendente no mesmo contexto: entra como gerente a cada troca
+      const { csrfToken } = await (await request.post('/api/staff/login', { data: MANAGER })).json();
+      const h = { headers: { 'x-csrf-token': csrfToken } };
+      expect((await request.post(`/api/staff/campaigns/${id}/pause`, { data: {}, ...h })).ok()).toBeTruthy();
+      expect((await request.patch(`/api/staff/campaigns/${id}`, { data: body, ...h })).ok()).toBeTruthy();
+      expect((await request.post(`/api/staff/campaigns/${id}/activate`, { data: {}, ...h })).ok()).toBeTruthy();
+    };
+    await set({ awardRule: 'min_score', minCorrect: 8 });
+    try {
+      const inv = await createInvite(request, 'E2E-META-1');
+      await openRegistered(page, inv.url.replace('http://localhost:3100', ''));
+      await expect(page.locator('.offer .rule')).toHaveText('Para ganhar, acerte pelo menos 8 das 8 perguntas.');
+      await page.getByRole('button', { name: 'Começar com brinde' }).click();
+      // erra de propósito a primeira (consulta a correta no banco e escolhe outra)
+      const [{ question_order: order }] = await db('SELECT question_order FROM quiz_sessions ORDER BY id DESC LIMIT 1');
+      const wrong = order[0].options.find((o) => o.id !== order[0].correctOptionId).id;
+      await page.locator(`.opt[data-option="${wrong}"]`).click();
+      await page.locator('#btn-confirm').click();
+      await page.locator('#btn-next').click();
+      for (let i = 1; i < 8; i++) { await answerCurrent(page); await page.locator('#btn-next').click(); }
+      await expect(page.locator('.demo-note.outcome')).toContainText('a meta era 8 ou mais');
+      await expect(page.locator('.voucher')).toHaveCount(0);
+      const [s] = await db('SELECT award_outcome, reservation_state FROM quiz_sessions ORDER BY id DESC LIMIT 1');
+      expect(s).toEqual({ award_outcome: 'not_qualified', reservation_state: 'released' });
+    } finally {
+      await set({ awardRule: 'participation' });
+    }
   });
 
   test('cadastros: só o gerente vê a aba e baixa a planilha', async ({ browser }) => {

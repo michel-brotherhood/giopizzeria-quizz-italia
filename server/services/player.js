@@ -151,7 +151,7 @@ export async function getSessionState(pool, sessionId) {
     await expireSessionIfDue(c, s);
     let { rows: [v] } = await c.query('SELECT * FROM vouchers WHERE session_id=$1 FOR UPDATE', [s.id]);
     if (v) await expireVoucherIfDue(c, v);
-    const { rows: [camp] } = await c.query('SELECT name, reward_name, quantity_per_voucher, rules_text, is_test FROM campaigns WHERE id=$1', [s.campaign_id]);
+    const { rows: [camp] } = await c.query('SELECT name, reward_name, quantity_per_voucher, rules_text, is_test, award_rule, min_correct, every_n FROM campaigns WHERE id=$1', [s.campaign_id]);
     const answers = await loadAnswers(c, s.id);
     const order = s.question_order;
     const current = s.state === 'active' && answers.length < ROUND_SIZE ? publicQuestion(order[answers.length]) : null;
@@ -163,11 +163,12 @@ export async function getSessionState(pool, sessionId) {
         expiresAt: s.expires_at,
         completedAt: s.completed_at,
         score: s.score,
+        awardOutcome: s.award_outcome,
         answeredCount: answers.length,
         total: ROUND_SIZE,
         current,
         answered: answers.map((a) => ({ question: publicQuestion(order[a.position]), ...feedbackFor(order[a.position], a) })),
-        campaign: { name: camp.name, rewardName: camp.reward_name, quantityPerVoucher: camp.quantity_per_voucher, rulesText: camp.rules_text, isTest: camp.is_test },
+        campaign: { name: camp.name, rewardName: camp.reward_name, quantityPerVoucher: camp.quantity_per_voucher, rulesText: camp.rules_text, isTest: camp.is_test, awardRule: camp.award_rule, minCorrect: camp.min_correct, everyN: camp.every_n },
       },
       voucher: await voucherView(v),
     };
@@ -208,6 +209,19 @@ export async function answerQuestion(pool, sessionId, { questionId, selectedOpti
   });
 }
 
+/**
+ * Decide o prêmio de uma partida concluída (campanha já bloqueada em FOR UPDATE).
+ * participation: sempre; min_score: acertos >= min_correct; every_n: entre as qualificadas, cada N-ésima.
+ */
+async function decideAward(c, camp, correct) {
+  if (camp.award_rule === 'participation') return 'awarded';
+  if (correct < camp.min_correct) return 'not_qualified';
+  if (camp.award_rule === 'min_score') return 'awarded';
+  const { rows: [{ qualified_count: q }] } = await c.query(
+    'UPDATE campaigns SET qualified_count = qualified_count + 1 WHERE id=$1 RETURNING qualified_count', [camp.id]);
+  return q % camp.every_n === 0 ? 'awarded' : 'qualified_no_prize';
+}
+
 /** POST /api/player/session/complete — converte a reserva em voucher único. Repetição devolve o mesmo. */
 export async function completeSession(pool, sessionId, idemKey) {
   const voucherId = await tx(pool, async (c) => {
@@ -216,6 +230,7 @@ export async function completeSession(pool, sessionId, idemKey) {
     const result = await idempotent(c, `player:${s.id}:complete`, idemKey, { complete: true }, async () => {
       const { rows: [existing] } = await c.query('SELECT id FROM vouchers WHERE session_id=$1', [s.id]);
       if (existing) return { voucherId: existing.id };
+      if (s.state === 'completed') return { voucherId: null }; // concluída sem prêmio: repetição é inofensiva
       if (await expireSessionIfDue(c, s)) throw new CommitThenThrow(err('SESSION_EXPIRED'));
       if (s.state === 'expired') throw err('SESSION_EXPIRED');
       if (s.state === 'cancelled') throw err('SESSION_CANCELLED');
@@ -223,6 +238,16 @@ export async function completeSession(pool, sessionId, idemKey) {
       if (n !== ROUND_SIZE) throw err('SESSION_INCOMPLETE');
 
       const { rows: [camp] } = await c.query('SELECT * FROM campaigns WHERE id=$1 FOR UPDATE', [s.campaign_id]);
+      // Premiação decidida aqui, no servidor, com a campanha bloqueada (contagem sem corrida).
+      const { rows: [{ correct }] } = await c.query('SELECT count(*) FILTER (WHERE is_correct)::int AS correct FROM answers WHERE session_id=$1', [s.id]);
+      const outcome = await decideAward(c, camp, correct);
+      if (outcome !== 'awarded') {
+        await c.query(`UPDATE quiz_sessions SET state='completed', reservation_state='released', award_outcome=$2, completed_at=now()
+                       WHERE id=$1 AND state='active' AND reservation_state='reserved'`, [s.id, outcome]);
+        await c.query('UPDATE campaigns SET reserved_count = reserved_count - 1, updated_at=now() WHERE id=$1', [camp.id]);
+        await audit(c, 'session.completed_no_award', { campaignId: camp.id, sessionId: s.id, details: { outcome, correct } });
+        return { voucherId: null };
+      }
       const now = new Date();
       const token = randomToken(32);
       const code = shortCode(10);
@@ -233,11 +258,11 @@ export async function completeSession(pool, sessionId, idemKey) {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
         [s.id, camp.id, sha256(token), sha256(`code:${code}`), encrypt({ token, code }), camp.reward_name,
           camp.quantity_per_voucher, camp.rules_text, camp.rules_version, camp.is_test, expiresAt.toISOString()]);
-      await c.query(`UPDATE quiz_sessions SET state='completed', reservation_state='converted', completed_at=now()
+      await c.query(`UPDATE quiz_sessions SET state='completed', reservation_state='converted', award_outcome='awarded', completed_at=now()
                      WHERE id=$1 AND state='active' AND reservation_state='reserved'`, [s.id]);
       await c.query(`UPDATE campaigns SET reserved_count = reserved_count - 1, awarded_count = awarded_count + 1, updated_at=now()
                      WHERE id=$1`, [camp.id]);
-      await audit(c, 'voucher.issued', { campaignId: camp.id, sessionId: s.id, voucherId: v.id });
+      await audit(c, 'voucher.issued', { campaignId: camp.id, sessionId: s.id, voucherId: v.id, details: { rule: camp.award_rule, correct } });
       return { voucherId: v.id };
     });
     return result.voucherId;

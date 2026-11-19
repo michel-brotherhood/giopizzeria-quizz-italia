@@ -60,7 +60,7 @@ export function client(base, { register = true } = {}) {
 
 export async function createCampaign(pool, over = {}) {
   const c = {
-    name: '[TESTE] integração', is_test: true, state: 'active', reward_name: 'DEMONSTRAÇÃO — SEM VALOR DE RESGATE',
+    name: '[TESTE] integração', is_test: true, state: 'active', reward_name: 'Brinde de exemplo — sem valor de resgate',
     quantity_per_voucher: 1, rules_text: 'Teste', total_stock: 10,
     starts_at: new Date(Date.now() - 3600_000).toISOString(), ends_at: new Date(Date.now() + 86400_000).toISOString(),
     ...over,

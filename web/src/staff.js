@@ -137,7 +137,7 @@ async function refreshOverview() {
     const c = r.campaign;
     const body = $('campaign-body');
     if (!c) {
-      body.replaceChildren(el('p', {}, 'Nenhuma campanha ativa. O jogo funciona em modo demonstração (sem brinde).'));
+      body.replaceChildren(el('p', {}, 'Nenhuma campanha ativa. O jogo funciona sem brinde.'));
       return;
     }
     body.replaceChildren(
@@ -290,6 +290,11 @@ function stopScan() {
 $('scan-stop').addEventListener('click', stopScan);
 
 // ---------- gerenciar ----------
+function ruleLabel(c) {
+  if (c.awardRule === 'min_score') return `pontuação mínima (${c.minCorrect} de 8)`;
+  if (c.awardRule === 'every_n') return `a cada ${c.everyN} partidas com ${c.minCorrect}+ acertos (qualificadas até agora: ${c.qualifiedCount ?? 0})`;
+  return 'participação (quem concluir ganha)';
+}
 async function loadCampaigns() {
   const list = $('campaign-list');
   try {
@@ -297,6 +302,7 @@ async function loadCampaigns() {
     list.replaceChildren(...r.campaigns.map((c) => el('div', { class: 'camp' },
       el('p', {}, c.isTest ? el('span', { class: 'tag test' }, 'TESTE') : null, ' ', el('strong', {}, c.name), ' ', el('span', { class: `tag st-${c.state}` }, CAMP_PT[c.state])),
       el('p', { class: 'help' }, `Brinde: ${c.rewardName ?? '—'} · estoque ${c.totalStock} · disponível ${c.available} · emitidos ${c.awardedCount} · entregues ${c.redeemedCount}`),
+      el('p', { class: 'help' }, `Regra: ${ruleLabel(c)}`),
       c.missing.length && c.state !== 'closed' ? el('p', { class: 'help' }, `Falta para ativar: ${c.missing.join(', ')}`) : null,
       el('div', { class: 'row' },
         ['disabled', 'paused'].includes(c.state) ? el('button', { class: 's-btn', type: 'button', onclick: () => campAction(c.id, 'activate') }, 'Ativar') : null,
